@@ -1,0 +1,22 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QaaS.Common.Probes", "QaaS.Common.Probes\QaaS.Common.Probes.csproj", "{105EA021-71E5-4B98-9E1C-371C1D803A70}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QaaS.Common.Probes.Tests", "QaaS.Common.Probes.Tests\QaaS.Common.Probes.Tests.csproj", "{D7325C6D-2F44-4D8F-9848-78C00D99EDEA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{105EA021-71E5-4B98-9E1C-371C1D803A70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{105EA021-71E5-4B98-9E1C-371C1D803A70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{105EA021-71E5-4B98-9E1C-371C1D803A70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{105EA021-71E5-4B98-9E1C-371C1D803A70}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D7325C6D-2F44-4D8F-9848-78C00D99EDEA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D7325C6D-2F44-4D8F-9848-78C00D99EDEA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D7325C6D-2F44-4D8F-9848-78C00D99EDEA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D7325C6D-2F44-4D8F-9848-78C00D99EDEA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
