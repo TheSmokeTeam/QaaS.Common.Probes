@@ -122,4 +122,45 @@ public class EmptyElasticIndicesTests
             }
         });
     }
+
+    [Test]
+    public void TestRunProbeWithNullResponse_CallFunctionWithMockElasticClientThatReturnsNull_ShouldThrowException()
+    {
+        // Arrange
+        var indexes = new List<string> { "index-1" };
+
+        var mockElasticClient = new Mock<IElasticClient>();
+        mockElasticClient.Setup(m => m.DeleteByQuery(
+                It.IsAny<Func<DeleteByQueryDescriptor<dynamic>, IDeleteByQueryRequest>>()))
+            .Returns((DeleteByQueryResponse)null!);
+
+        var probe = new EmptyElasticIndicesMock(indexes)
+        {
+            Configuration = new EmptyElasticIndicesConfig
+            {
+                Url = "http://localhost:6969",
+                Username = "username",
+                Password = "password",
+                RequestTimeoutMs = 0,
+                IndexPattern = "*",
+                MatchQueryString = "*",
+            },
+            Context = Globals.Context
+        };
+
+        _elasticClientFieldInfo.SetValue(probe, mockElasticClient.Object);
+
+        // Act + Assert
+        Assert.Throws<AggregateException>(() =>
+        {
+            try
+            {
+                _runElasticProbeMethod.Invoke(probe, null);
+            }
+            catch (Exception e)
+            {
+                throw e.InnerException!;
+            }
+        });
+    }
 }

@@ -9,8 +9,8 @@ public record OsChangeEnvVarsConfig : OsUpdatePodsProbeConfig
     public string? ContainerName { get; set; }
 
     [Description("The environment variables to update/add")]
-    public Dictionary<string, string?> EnvVarsToUpdate { get; set; }
+    public Dictionary<string, string?> EnvVarsToUpdate { get; set; } = [];
 
     [Description("The environment variables to remove")]
-    public List<string> EnvVarsToRemove { get; set; }
+    public List<string> EnvVarsToRemove { get; set; } = [];
 }

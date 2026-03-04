@@ -13,5 +13,5 @@ public record OsEditYamlConfigMapConfig : OsProbeConfig
 
     [Description("The description of the configmap paths and values to change (in JSONPath format). For example:" +
                  "path.to.yaml.value[0]: new value")]
-    public Dictionary<string, object> ValuesToEdit { get; set; }
+    public Dictionary<string, object> ValuesToEdit { get; set; } = [];
 }

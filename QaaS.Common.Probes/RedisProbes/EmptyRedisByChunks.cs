@@ -13,11 +13,20 @@ public class EmptyRedisByChunks<TEmptyRedisByChunksProbeConfig> : BaseRedisProbe
         var cursor = 0L;
         do
         {
-            var result = (RedisResult[]?)RedisDb.Execute("SCAN", cursor.ToString(), "MATCH", "*", "COUNT",
-                Configuration.BatchSize.ToString())!;
-            if (result.Length != 2)
+            RedisResult[]? result;
+            try
+            {
+                result = (RedisResult[]?)RedisDb.Execute("SCAN", cursor.ToString(), "MATCH", "*", "COUNT",
+                    Configuration.BatchSize.ToString());
+            }
+            catch (InvalidCastException)
+            {
+                result = null;
+            }
+
+            if (result is not { Length: 2 })
                 throw new InvalidOperationException("Invalid response from redis database," +
-                                                    $" received {result?.Length} results, expected 2");
+                                                    $" received {result?.Length ?? 0} results, expected 2");
             cursor = (long)result[0];
             var keysToDelete = (RedisKey[])result[1]!;
             var deletedKeys = RedisDb.KeyDelete(keysToDelete);

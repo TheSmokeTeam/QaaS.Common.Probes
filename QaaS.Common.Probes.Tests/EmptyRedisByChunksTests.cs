@@ -63,4 +63,60 @@ public class EmptyRedisByChunksTests
         redisDataBaseMock.Verify(m => m.KeyDelete(It.IsAny<RedisKey[]>(), It.IsAny<CommandFlags>()),
             Times.Exactly(keysInRedis / batchSize + 1));
     }
+
+    [Test]
+    public void TestRunProbe_WhenScanResponseIsInvalid_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var redisDataBaseMock = new Mock<IDatabase>();
+        redisDataBaseMock.Setup(r =>
+                r.Execute(It.IsAny<string>(), It.IsAny<string>(), "MATCH", "*", "COUNT",
+                    It.IsAny<string>()))
+            .Returns(RedisResult.Create([RedisResult.Create(0L)]));
+
+        var probe = new EmptyRedisByChunks<RedisDataBaseBatchProbeConfig>
+        {
+            Configuration = new RedisDataBaseBatchProbeConfig { BatchSize = 10 },
+            Context = Globals.Context
+        };
+
+        var baseType = probe.GetType().BaseType;
+        var dbField = baseType?.GetField("RedisDb", BindingFlags.NonPublic | BindingFlags.Instance);
+        dbField!.SetValue(probe, redisDataBaseMock.Object);
+
+        var runRedisProbeMethod = typeof(EmptyRedisByChunks<RedisDataBaseBatchProbeConfig>)
+            .GetMethod("RunRedisProbe", BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+        // Act + Assert
+        var ex = Assert.Throws<TargetInvocationException>(() => runRedisProbeMethod.Invoke(probe, null));
+        Assert.That(ex!.InnerException, Is.TypeOf<InvalidOperationException>());
+    }
+
+    [Test]
+    public void TestRunProbe_WhenScanResponseIsScalar_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var redisDataBaseMock = new Mock<IDatabase>();
+        redisDataBaseMock.Setup(r =>
+                r.Execute(It.IsAny<string>(), It.IsAny<string>(), "MATCH", "*", "COUNT",
+                    It.IsAny<string>()))
+            .Returns(RedisResult.Create(42L));
+
+        var probe = new EmptyRedisByChunks<RedisDataBaseBatchProbeConfig>
+        {
+            Configuration = new RedisDataBaseBatchProbeConfig { BatchSize = 10 },
+            Context = Globals.Context
+        };
+
+        var baseType = probe.GetType().BaseType;
+        var dbField = baseType?.GetField("RedisDb", BindingFlags.NonPublic | BindingFlags.Instance);
+        dbField!.SetValue(probe, redisDataBaseMock.Object);
+
+        var runRedisProbeMethod = typeof(EmptyRedisByChunks<RedisDataBaseBatchProbeConfig>)
+            .GetMethod("RunRedisProbe", BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+        // Act + Assert
+        var ex = Assert.Throws<TargetInvocationException>(() => runRedisProbeMethod.Invoke(probe, null));
+        Assert.That(ex!.InnerException, Is.TypeOf<InvalidOperationException>());
+    }
 }

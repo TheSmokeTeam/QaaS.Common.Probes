@@ -8,6 +8,13 @@ public static class ReplicaSetUpdateExtensions
 {
     private const string Cpu = "cpu", Memory = "memory";
 
+    private static string? GetQuantity(IDictionary<string, ResourceQuantity>? resources, string key)
+    {
+        if (resources == null || !resources.TryGetValue(key, out var resourceQuantity))
+            return null;
+        return resourceQuantity.ToString();
+    }
+
     private static V1Container GetContainerFromTemplate(V1PodTemplateSpec template, string containerName,
         string replicaSetName)
     {
@@ -37,13 +44,13 @@ public static class ReplicaSetUpdateExtensions
         var newLimits = new Dictionary<string, ResourceQuantity>();
         var newRequests = new Dictionary<string, ResourceQuantity>();
         var cpuLimit = desiredResources?.Limits?.Cpu ??
-                       containerResources.Limits?.FirstOrDefault(kvp => kvp.Key == Cpu).Value?.Value;
+                       GetQuantity(containerResources.Limits, Cpu);
         var memoryLimit = desiredResources?.Limits?.Memory ??
-                          containerResources.Limits?.FirstOrDefault(kvp => kvp.Key == Memory).Value?.Value;
+                          GetQuantity(containerResources.Limits, Memory);
         var cpuRequests = desiredResources?.Requests?.Cpu ??
-                          containerResources.Requests?.FirstOrDefault(kvp => kvp.Key == Cpu).Value?.Value;
+                          GetQuantity(containerResources.Requests, Cpu);
         var memoryRequests = desiredResources?.Requests?.Memory ??
-                             containerResources.Requests?.FirstOrDefault(kvp => kvp.Key == Memory).Value?.Value;
+                             GetQuantity(containerResources.Requests, Memory);
         if (cpuLimit != null)
             newLimits.Add(Cpu, new ResourceQuantity(cpuLimit));
         if (memoryLimit != null)
@@ -88,7 +95,7 @@ public static class ReplicaSetUpdateExtensions
         // if the user configured a specific container to change
         if (containerToChange != null)
         {
-            var container = containers.First(c => c.Name.Equals(containerToChange)) ??
+            var container = containers.FirstOrDefault(c => c.Name.Equals(containerToChange)) ??
                             throw new ArgumentException($"Could not find a container named '{containerToChange}'");
             ChangeContainerEnvVars(container, envVarsToUpdate, envVarsToRemove);
         }

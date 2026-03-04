@@ -23,12 +23,12 @@ public class DeleteRabbitMqBindings
             case BindingType.ExchangeToQueue:
                 channel.QueueUnbindAsync(objectToManipulateConfig.DestinationName!,
                     objectToManipulateConfig.SourceName!,
-                    objectToManipulateConfig.RoutingKey).GetAwaiter().GetResult();
+                    objectToManipulateConfig.RoutingKey, objectToManipulateConfig.Arguments).GetAwaiter().GetResult();
                 break;
             case BindingType.ExchangeToExchange:
                 channel.ExchangeUnbindAsync(objectToManipulateConfig.DestinationName!,
                     objectToManipulateConfig.SourceName!,
-                    objectToManipulateConfig.RoutingKey).GetAwaiter().GetResult();
+                    objectToManipulateConfig.RoutingKey, objectToManipulateConfig.Arguments).GetAwaiter().GetResult();
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(objectToManipulateConfig.BindingType),

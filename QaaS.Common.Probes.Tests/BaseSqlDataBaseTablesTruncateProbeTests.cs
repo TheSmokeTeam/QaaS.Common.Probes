@@ -63,4 +63,39 @@ public class BaseSqlDataBaseTablesTruncateProbeTests
         // Assert
         _dbCommandMock!.Verify(mock => mock.ExecuteNonQuery(), executedNonQueryCount);
     }
+
+    [Test]
+    public void TestTruncateTablesRunProbe_WhenConnectionClosed_ShouldSetCommandAndOpenAndCloseConnection()
+    {
+        // Arrange
+        const int commandTimeout = 42;
+        var commandMock = new Mock<IDbCommand>();
+        commandMock.Setup(mock => mock.ExecuteNonQuery()).Returns(1);
+
+        var connectionMock = new Mock<IDbConnection>();
+        connectionMock.Setup(mock => mock.CreateCommand()).Returns(commandMock.Object);
+        connectionMock.SetupSequence(mock => mock.State)
+            .Returns(ConnectionState.Closed)
+            .Returns(ConnectionState.Open);
+
+        var probe = new MockSqlDataBaseTablesTruncateProbe(connectionMock.Object)
+        {
+            Configuration = new SqlDataBaseTablesTruncateProbeConfig
+            {
+                TableNames = ["users"],
+                CommandTimeoutSeconds = commandTimeout
+            },
+            Context = Globals.Context
+        };
+
+        // Act
+        probe.Run(new List<SessionData>().ToImmutableList(), new List<DataSource>().ToImmutableList());
+
+        // Assert
+        commandMock.VerifySet(mock => mock.CommandText = "Truncate Table users", Times.Once);
+        commandMock.VerifySet(mock => mock.CommandTimeout = commandTimeout, Times.Once);
+        commandMock.Verify(mock => mock.ExecuteNonQuery(), Times.Once);
+        connectionMock.Verify(mock => mock.Open(), Times.Once);
+        connectionMock.Verify(mock => mock.Close(), Times.Once);
+    }
 }
