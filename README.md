@@ -9,66 +9,66 @@ Composable .NET probes for QaaS workflow setup and environment data/state manipu
 ## Contents
 - [Overview](#overview)
 - [Packages](#packages)
-- [Architecture](#architecture)
-- [Install and Upgrade](#install-and-upgrade)
+- [Functionalities](#functionalities)
+- [Protocol Support](#protocol-support)
+- [Quick Start](#quick-start)
+- [Build and Test](#build-and-test)
 - [Documentation](#documentation)
 
 ## Overview
 This repository contains one solution: [`QaaS.Common.Probes.sln`](./QaaS.Common.Probes.sln).
 
-The solution provides reusable probe implementations consumed by QaaS workflows for infrastructure and data-state manipulation across OpenShift/Kubernetes, RabbitMQ, Redis, S3, SQL, and Elastic environments.
+The solution is split into a publishable NuGet package for shared probe implementations and a dedicated NUnit test project.
 
 ## Packages
 | Package | Latest Version | Total Downloads |
 |---|---|---|
 | [QaaS.Common.Probes](https://www.nuget.org/packages/qaas.common.probes) | [![NuGet](https://img.shields.io/nuget/v/QaaS.Common.Probes?logo=nuget)](https://www.nuget.org/packages/qaas.common.probes) | [![Downloads](https://img.shields.io/nuget/dt/QaaS.Common.Probes?logo=nuget)](https://www.nuget.org/packages/qaas.common.probes) |
 
-## Architecture
+## Functionalities
 ### [QaaS.Common.Probes](./QaaS.Common.Probes/)
-- **OpenShift/Kubernetes probes (`OsProbes/`)**:
-  - Deployment/StatefulSet scaling.
-  - Deployment/StatefulSet image updates.
-  - Deployment/StatefulSet resource updates.
-  - Deployment/StatefulSet environment variable updates.
-  - ConfigMap YAML mutation.
-  - Pod restart with desired-state wait logic.
-  - Command execution inside containers.
-- **RabbitMQ probes (`RabbitMqProbes/`)**:
-  - Queue/exchange create and delete.
-  - Binding create and delete (exchange->queue and exchange->exchange).
-  - Queue purge operations.
-- **Redis probes (`RedisProbes/`)**:
-  - `FLUSHALL` and `FLUSHDB` operations.
-  - Batched key cleanup using SCAN + delete.
-- **S3 probes (`S3Probes/`)**:
-  - Bucket object cleanup (with optional prefix).
-  - Bucket cleanup + bucket deletion flow.
-- **SQL probes (`SqlProbes/`)**:
-  - Table truncation for MSSQL, PostgreSQL, and Oracle.
-- **Elastic probes (`ElasticProbes/`)**:
-  - Index cleanup by index pattern and query string.
-- **Configuration models (`ConfigurationObjects/`)**:
-  - Strongly typed probe configuration objects per probe family.
-- **Shared extensions (`Extensions/`)**:
-  - OpenShift auth/bootstrap helpers.
-  - Kubernetes object mutation helpers.
+- OpenShift/Kubernetes probes for pod scaling, image/resource updates, env var mutation, config-map YAML edits, pod restarts, and command execution in containers.
+- RabbitMQ probes for queue/exchange create/delete, binding create/delete, and queue purge operations.
+- Redis probes for `FLUSHALL`, `FLUSHDB`, and chunked key cleanup via `SCAN` + delete.
+- S3 probes for bucket object cleanup (optional prefix) and bucket deletion flows.
+- SQL probes for table truncation in MSSQL, PostgreSQL, and Oracle.
+- Elastic probes for index cleanup by index pattern and query string.
+- Shared configuration objects and extensions used across probe implementations.
 
 ### [QaaS.Common.Probes.Tests](./QaaS.Common.Probes.Tests/)
-- NUnit test project for branch/logic coverage of probe behavior and helper extensions.
-- Uses Moq-based test doubles for protocol/client interactions.
+- NUnit test project covering probe logic and branch behavior.
+- Uses Moq-based test doubles for protocol/client interaction testing.
 
-## Install and Upgrade
-Install:
+## Protocol Support
+Supported operational targets in `QaaS.Common.Probes`:
+
+| Family | Implementations |
+|---|---|
+| Container Orchestration | OpenShift/Kubernetes |
+| Messaging / Queueing | RabbitMQ |
+| Databases / Cache | Redis, MSSQL, PostgreSQL, Oracle |
+| Search / Indexing | Elasticsearch |
+| Object Storage | S3 |
+
+## Quick Start
+Install package:
 
 ```bash
 dotnet add package QaaS.Common.Probes
 ```
 
-Upgrade:
+Update package:
 
 ```bash
 dotnet add package QaaS.Common.Probes --version 1.0.0-alpha.2
 dotnet restore
+```
+
+## Build and Test
+```bash
+dotnet restore QaaS.Common.Probes.sln
+dotnet build QaaS.Common.Probes.sln -c Release --no-restore
+dotnet test QaaS.Common.Probes.sln -c Release --no-build
 ```
 
 ## Documentation
