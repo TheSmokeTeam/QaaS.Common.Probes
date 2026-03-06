@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 env:
   DOTNET_NOLOGO: true
@@ -29,6 +30,50 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
+
+      - name: Validate package metadata
+        shell: powershell
+        run: |
+          [xml]$project = Get-Content ${{ env.PROJECT_TO_PACK }}
+          $description = ($project.Project.PropertyGroup | Where-Object { $_.Description } | Select-Object -First 1).Description
+          if ([string]::IsNullOrWhiteSpace($description)) {
+            Write-Host "No package Description found in ${{ env.PROJECT_TO_PACK }}, skipping metadata validation."
+            exit 0
+          }
+
+          $packageReadmeFile = ($project.Project.PropertyGroup | Where-Object { $_.PackageReadmeFile } | Select-Object -First 1).PackageReadmeFile
+          $includeSymbols = ($project.Project.PropertyGroup | Where-Object { $_.IncludeSymbols } | Select-Object -First 1).IncludeSymbols
+          $symbolPackageFormat = ($project.Project.PropertyGroup | Where-Object { $_.SymbolPackageFormat } | Select-Object -First 1).SymbolPackageFormat
+
+          $readmeLinked = $false
+          foreach ($itemGroup in $project.Project.ItemGroup) {
+            foreach ($noneItem in @($itemGroup.None)) {
+              if ($noneItem.Link -eq "README.md" -and $noneItem.Pack -eq "true") {
+                $readmeLinked = $true
+              }
+            }
+          }
+
+          $errors = @()
+          if ([string]::IsNullOrWhiteSpace($packageReadmeFile)) {
+            $errors += "PackageReadmeFile must be set for package projects."
+          }
+          if (-not $readmeLinked) {
+            $errors += "README.md must be included in package items with Pack=true and Link=README.md."
+          }
+          if ("$includeSymbols".ToLowerInvariant() -ne "true") {
+            $errors += "IncludeSymbols must be true for package projects."
+          }
+          if ("$symbolPackageFormat".ToLowerInvariant() -ne "snupkg") {
+            $errors += "SymbolPackageFormat must be snupkg for package projects."
+          }
+
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_ }
+            exit 1
+          }
+
+          Write-Host "Package metadata validation passed."
 
       - name: Restore packages
         run: dotnet restore ${{ env.SOLUTION_PATH }}
