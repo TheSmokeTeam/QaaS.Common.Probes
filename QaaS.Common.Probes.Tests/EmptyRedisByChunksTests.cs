@@ -119,4 +119,42 @@ public class EmptyRedisByChunksTests
         var ex = Assert.Throws<TargetInvocationException>(() => runRedisProbeMethod.Invoke(probe, null));
         Assert.That(ex!.InnerException, Is.TypeOf<InvalidOperationException>());
     }
+
+    [Test]
+    public void TestRunProbe_WhenRegexIsConfigured_ShouldDeleteOnlyMatchingKeys()
+    {
+        var redisDataBaseMock = new Mock<IDatabase>();
+        RedisKey[]? deletedKeys = null;
+        redisDataBaseMock.Setup(r =>
+                r.Execute(It.IsAny<string>(), It.IsAny<string>(), "MATCH", "*", "COUNT",
+                    It.IsAny<string>()))
+            .Returns(RedisResult.Create([
+                RedisResult.Create(0L),
+                RedisResult.Create(["keep:1", "delete:1", "delete:2"])
+            ]));
+        redisDataBaseMock.Setup(r => r.KeyDelete(It.IsAny<RedisKey[]>(), It.IsAny<CommandFlags>()))
+            .Callback<RedisKey[], CommandFlags>((keys, _) => deletedKeys = keys)
+            .Returns<RedisKey[], CommandFlags>((keys, _) => keys.LongLength);
+
+        var probe = new EmptyRedisByChunks<RedisDataBaseBatchProbeConfig>
+        {
+            Configuration = new RedisDataBaseBatchProbeConfig
+            {
+                BatchSize = 10,
+                KeyRegexPattern = "^delete:"
+            },
+            Context = Globals.Context
+        };
+
+        var baseType = probe.GetType().BaseType;
+        var dbField = baseType?.GetField("RedisDb", BindingFlags.NonPublic | BindingFlags.Instance);
+        dbField!.SetValue(probe, redisDataBaseMock.Object);
+
+        var runRedisProbeMethod = typeof(EmptyRedisByChunks<RedisDataBaseBatchProbeConfig>)
+            .GetMethod("RunRedisProbe", BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+        runRedisProbeMethod.Invoke(probe, null);
+
+        Assert.That(deletedKeys, Is.EqualTo(new RedisKey[] { "delete:1", "delete:2" }));
+    }
 }
