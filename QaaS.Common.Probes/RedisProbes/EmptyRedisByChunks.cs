@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using QaaS.Common.Probes.ConfigurationObjects.Redis;
 using StackExchange.Redis;
+using System.Text.RegularExpressions;
 
 namespace QaaS.Common.Probes.RedisProbes;
 
@@ -28,9 +29,17 @@ public class EmptyRedisByChunks<TEmptyRedisByChunksProbeConfig> : BaseRedisProbe
                 throw new InvalidOperationException("Invalid response from redis database," +
                                                     $" received {result?.Length ?? 0} results, expected 2");
             cursor = (long)result[0];
-            var keysToDelete = (RedisKey[])result[1]!;
+            var keysToDelete = ((RedisKey[])result[1]!)
+                .Where(ShouldDeleteKey)
+                .ToArray();
             var deletedKeys = RedisDb.KeyDelete(keysToDelete);
             Context.Logger.LogDebug("Successfully deleted a chunk of {DeletedKeys}", deletedKeys);
         } while (cursor != 0);
+    }
+
+    private bool ShouldDeleteKey(RedisKey key)
+    {
+        return string.IsNullOrWhiteSpace(Configuration.KeyRegexPattern) ||
+               Regex.IsMatch(key.ToString(), Configuration.KeyRegexPattern);
     }
 }
