@@ -15,10 +15,12 @@ public abstract class
         var replicaSet = ReadReplicaSet();
 
         replicaSet = UpdateReplicaSet(replicaSet);
+        var desiredGeneration = GetReplicaSetGeneration(replicaSet);
         Context.Logger.LogInformation("Updated ReplicaSet, waiting for ReplicaSet to reach desired state");
         WaitForReplicaCountToReachDesiredState(replicaSet,
             Configuration.IntervalBetweenDesiredStateChecksMs,
-            Configuration.TimeoutWaitForDesiredStateSeconds);
+            Configuration.TimeoutWaitForDesiredStateSeconds,
+            desiredGeneration);
     }
 
     /// <summary>
@@ -30,16 +32,18 @@ public abstract class
     /// amount of replicas available is equal to the desired number of replicas </param>
     /// <param name="maximumTimeOutSeconds"> The maximum timeout in seconds before the function ends and
     /// raises an error log</param>
+    /// <param name="desiredGeneration">The generation that must be observed by the controller before the probe completes</param>
     private void WaitForReplicaCountToReachDesiredState(TReplicaSet replicaSet,
         int milliSecondsTimeOutBetweenChecks,
-        int maximumTimeOutSeconds)
+        int maximumTimeOutSeconds,
+        long? desiredGeneration)
     {
         var stopWatch = new Stopwatch();
         stopWatch.Start();
         Thread.Sleep(milliSecondsTimeOutBetweenChecks);
         replicaSet = ReadReplicaSet();
 
-        while (!IsReplicaSetAvailable(replicaSet))
+        while (!HasReplicaSetReachedDesiredState(replicaSet, desiredGeneration))
         {
             // Reached timeout and still running, return false
             if (stopWatch.ElapsedMilliseconds >= maximumTimeOutSeconds * 1000)
@@ -61,12 +65,23 @@ public abstract class
             Configuration.ReplicaSetName, stopWatch.ElapsedMilliseconds);
     }
 
+    private bool HasReplicaSetReachedDesiredState(TReplicaSet replicaSet, long? desiredGeneration)
+    {
+        var observedGeneration = GetObservedGeneration(replicaSet);
+        return (desiredGeneration == null || observedGeneration >= desiredGeneration) &&
+               IsReplicaSetAvailable(replicaSet);
+    }
+
     /// <summary>
     /// Checks whether all replicas in the replica set are available
     /// </summary>
     /// <param name="replicaSet"> The replicaset to check </param>
     /// <returns> True if all replicas are available, false otherwise </returns>
     protected abstract bool IsReplicaSetAvailable(TReplicaSet replicaSet);
+
+    protected abstract long? GetReplicaSetGeneration(TReplicaSet replicaSet);
+
+    protected abstract long? GetObservedGeneration(TReplicaSet replicaSet);
 
     /// <summary>
     /// Gets the replicaset manifest from the k8s cluster
