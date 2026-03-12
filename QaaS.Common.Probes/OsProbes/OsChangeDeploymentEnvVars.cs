@@ -17,6 +17,7 @@ public class OsChangeDeploymentEnvVars :
         ReplicaSetUpdateExtensions.ChangeReplicaSetEnvVars(
             replicaSet.Spec.Template.Spec.Containers, Configuration.EnvVarsToUpdate, Configuration.EnvVarsToRemove,
             Configuration.ContainerName);
+        replicaSet.Spec.Template.TouchReplicaSetTemplate();
 
         return Kubernetes.ReplaceNamespacedDeployment(replicaSet, Configuration.ReplicaSetName,
             Configuration.Openshift!.Namespace);
