@@ -68,7 +68,7 @@ public abstract class
     private bool HasReplicaSetReachedDesiredState(TReplicaSet replicaSet, long? desiredGeneration)
     {
         var observedGeneration = GetObservedGeneration(replicaSet);
-        return (desiredGeneration == null || observedGeneration >= desiredGeneration) &&
+        return (desiredGeneration == null || observedGeneration == null || observedGeneration >= desiredGeneration) &&
                IsReplicaSetAvailable(replicaSet);
     }
 
