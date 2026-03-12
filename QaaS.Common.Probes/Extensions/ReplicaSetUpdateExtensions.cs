@@ -7,6 +7,7 @@ namespace QaaS.Common.Probes.Extensions;
 public static class ReplicaSetUpdateExtensions
 {
     private const string Cpu = "cpu", Memory = "memory";
+    private const string LastMutationAnnotation = "qaas.smoketeam.io/last-mutation-id";
 
     private static string? GetQuantity(IDictionary<string, ResourceQuantity>? resources, string key)
     {
@@ -121,5 +122,13 @@ public static class ReplicaSetUpdateExtensions
         }
 
         container.Env = envDict.Values.ToList();
+    }
+
+    public static V1PodTemplateSpec TouchReplicaSetTemplate(this V1PodTemplateSpec template)
+    {
+        template.Metadata ??= new V1ObjectMeta();
+        template.Metadata.Annotations ??= new Dictionary<string, string>();
+        template.Metadata.Annotations[LastMutationAnnotation] = Guid.NewGuid().ToString("N");
+        return template;
     }
 }

@@ -17,6 +17,7 @@ public class OsChangeStatefulSetEnvVars :
         ReplicaSetUpdateExtensions.ChangeReplicaSetEnvVars(
             replicaSet.Spec.Template.Spec.Containers, Configuration.EnvVarsToUpdate, Configuration.EnvVarsToRemove,
             Configuration.ContainerName);
+        replicaSet.Spec.Template.TouchReplicaSetTemplate();
 
         return Kubernetes.ReplaceNamespacedStatefulSet(replicaSet, Configuration.ReplicaSetName,
             Configuration.Openshift!.Namespace);
