@@ -233,6 +233,26 @@ public class OsProbeLogicTests
     }
 
     [Test]
+    public void TestRunLoop_WhenObservedGenerationIsMissing_ShouldFallbackToAvailabilityCheck()
+    {
+        var probe = new TestableRunLoopProbe([true], [null])
+        {
+            Configuration = CreateBaseConfig("replica-set-a") with
+            {
+                IntervalBetweenDesiredStateChecksMs = 0,
+                TimeoutWaitForDesiredStateSeconds = 5
+            },
+            Context = Globals.Context
+        };
+
+        probe.InvokeRunOsProbe();
+
+        Assert.That(probe.UpdateReplicaSetCalls, Is.EqualTo(1));
+        Assert.That(probe.ReadReplicaSetCalls, Is.GreaterThanOrEqualTo(2));
+        Assert.That(probe.AvailabilityChecks, Is.EqualTo(1));
+    }
+
+    [Test]
     public void TestRunLoop_WhenTimeoutReached_ShouldReturnWithoutThrowing()
     {
         // Arrange
