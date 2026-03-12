@@ -29,6 +29,10 @@ public abstract class
                (replicaSet.Status.ReadyReplicas ?? 0) == (replicaSet.Status.Replicas ?? 0);
     }
 
+    protected override long? GetReplicaSetGeneration(V1Deployment replicaSet) => replicaSet.Metadata?.Generation;
+
+    protected override long? GetObservedGeneration(V1Deployment replicaSet) => replicaSet.Status?.ObservedGeneration;
+
     protected override V1Deployment ReadReplicaSet()
     {
         return Kubernetes.ReadNamespacedDeployment(Configuration.ReplicaSetName,

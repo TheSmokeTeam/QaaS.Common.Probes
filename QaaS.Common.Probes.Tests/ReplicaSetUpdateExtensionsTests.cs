@@ -141,6 +141,56 @@ public class ReplicaSetUpdateExtensionsTests
             "missing-container"));
     }
 
+    [Test]
+    public void TestChangeReplicaSetEnvVars_WhenContainerEnvIsMissing_ShouldCreateUpdatedEnvironment()
+    {
+        var containers = new List<V1Container>
+        {
+            new()
+            {
+                Name = "app",
+                Env = null
+            },
+            new()
+            {
+                Name = "sidecar",
+                Env = [new V1EnvVar { Name = "UNCHANGED", Value = "1" }]
+            }
+        };
+
+        ReplicaSetUpdateExtensions.ChangeReplicaSetEnvVars(
+            containers,
+            new Dictionary<string, string?> { ["NEW_VALUE"] = "abc" },
+            [],
+            null);
+
+        var appEnv = containers[0].Env!.ToDictionary(e => e.Name, e => e.Value);
+        var sidecarEnv = containers[1].Env!.ToDictionary(e => e.Name, e => e.Value);
+
+        Assert.That(appEnv["NEW_VALUE"], Is.EqualTo("abc"));
+        Assert.That(sidecarEnv["NEW_VALUE"], Is.EqualTo("abc"));
+        Assert.That(sidecarEnv["UNCHANGED"], Is.EqualTo("1"));
+    }
+
+    [Test]
+    public void TestTouchReplicaSetTemplate_WhenCalledTwice_ShouldRefreshMutationAnnotation()
+    {
+        var template = new V1PodTemplateSpec
+        {
+            Metadata = new V1ObjectMeta()
+        };
+
+        template.TouchReplicaSetTemplate();
+        var firstMutationId = template.Metadata!.Annotations!["qaas.smoketeam.io/last-mutation-id"];
+
+        template.TouchReplicaSetTemplate();
+        var secondMutationId = template.Metadata!.Annotations!["qaas.smoketeam.io/last-mutation-id"];
+
+        Assert.That(firstMutationId, Is.Not.Null.And.Not.Empty);
+        Assert.That(secondMutationId, Is.Not.Null.And.Not.Empty);
+        Assert.That(secondMutationId, Is.Not.EqualTo(firstMutationId));
+    }
+
     private static V1PodTemplateSpec CreateTemplate(string containerName)
     {
         return new V1PodTemplateSpec
