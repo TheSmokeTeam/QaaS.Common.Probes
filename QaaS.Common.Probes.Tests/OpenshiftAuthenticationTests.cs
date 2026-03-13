@@ -1,0 +1,83 @@
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using NUnit.Framework;
+using QaaS.Common.Probes.Extensions;
+
+namespace QaaS.Common.Probes.Tests;
+
+[TestFixture]
+public class OpenshiftAuthenticationTests
+{
+    [Test]
+    public void CreateKubernetesClient_WhenOauthEndpointsRespond_ReturnsAuthenticatedClient()
+    {
+        var port = GetFreeTcpPort();
+        using var listener = new HttpListener();
+        listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+        listener.Start();
+
+        var serverTask = Task.Run(async () =>
+        {
+            await HandleOauthDiscoveryAsync(listener, port);
+            await HandleAuthorizationAsync(listener, port);
+            await HandleAuthorizationRedirectAsync(listener);
+            await HandleTokenExchangeAsync(listener);
+        });
+
+        var kubernetesClient = OpenshiftAuthentication.CreateKubernetesClient(
+            $"http://127.0.0.1:{port}",
+            "user",
+            "pass");
+
+        serverTask.GetAwaiter().GetResult();
+
+        Assert.That(kubernetesClient.BaseUri.AbsoluteUri, Is.EqualTo($"http://127.0.0.1:{port}/"));
+    }
+
+    private static async Task HandleOauthDiscoveryAsync(HttpListener listener, int port)
+    {
+        var context = await listener.GetContextAsync();
+        context.Response.StatusCode = 200;
+        var payload =
+            $$"""
+              {"authorization_endpoint":"http://127.0.0.1:{{port}}/auth","token_endpoint":"http://127.0.0.1:{{port}}/token"}
+              """;
+        await context.Response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(payload));
+        context.Response.Close();
+    }
+
+    private static async Task HandleAuthorizationAsync(HttpListener listener, int port)
+    {
+        var context = await listener.GetContextAsync();
+        context.Response.StatusCode = 302;
+        context.Response.RedirectLocation = $"http://127.0.0.1:{port}/callback?code=test-code&state=1";
+        context.Response.Close();
+        await Task.CompletedTask;
+    }
+
+    private static async Task HandleAuthorizationRedirectAsync(HttpListener listener)
+    {
+        var context = await listener.GetContextAsync();
+        context.Response.StatusCode = 200;
+        await context.Response.OutputStream.WriteAsync(Array.Empty<byte>());
+        context.Response.Close();
+    }
+
+    private static async Task HandleTokenExchangeAsync(HttpListener listener)
+    {
+        var context = await listener.GetContextAsync();
+        context.Response.StatusCode = 200;
+        await context.Response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes("{\"access_token\":\"token-value\"}"));
+        context.Response.Close();
+    }
+
+    private static int GetFreeTcpPort()
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        return port;
+    }
+}

@@ -29,8 +29,8 @@ public static class OpenshiftAuthentication
             host = host.Remove(host.Length - 1);
 
         var url = $"{host}/.well-known/oauth-authorization-server";
-        var response = HttpClient.GetAsync(url).Result;
-        var oauthInfo = response.Content.ReadAsStringAsync().Result;
+        using var response = HttpClient.GetAsync(url).GetAwaiter().GetResult();
+        var oauthInfo = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
         var jsonAuthInfo = JObject.Load(new JsonTextReader(new StringReader(oauthInfo)));
         return (jsonAuthInfo["authorization_endpoint"]!.ToString(), jsonAuthInfo["token_endpoint"]!.ToString());
     }
@@ -38,7 +38,8 @@ public static class OpenshiftAuthentication
     private static string ExtractToken(HttpResponseMessage responseMessage)
     {
         var jsonAuthInfo =
-            JObject.Load(new JsonTextReader(new StringReader(responseMessage.Content.ReadAsStringAsync().Result)));
+            JObject.Load(new JsonTextReader(new StringReader(
+                responseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult())));
 
         return jsonAuthInfo["access_token"]!.ToString();
     }
@@ -63,20 +64,20 @@ public static class OpenshiftAuthentication
         var httpRequest = new HttpRequestMessage(HttpMethod.Get, authUrl);
         httpRequest.Headers.Add("authorization", $"Basic {Convert.ToBase64String(authBytes)}");
         httpRequest.Headers.Add("X-Csrf-Token", "1");
-        var response = HttpClient.SendAsync(httpRequest).Result;
+        using var authorizationResponse = HttpClient.SendAsync(httpRequest).GetAwaiter().GetResult();
 
-        var location = response.RequestMessage!.RequestUri!.AbsoluteUri;
+        var location = authorizationResponse.RequestMessage!.RequestUri!.AbsoluteUri;
         var sha256Code = location.Substring(location.IndexOf("?", StringComparison.Ordinal) + 1);
 
         // Request to send the sha256 code from the previous GET request to the token endpoint
-        httpRequest = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint);
-        httpRequest.Headers.Add("Accept", "application/json");
-        httpRequest.Headers.Add("Authorization", "Basic REDA=");
-        httpRequest.Content = new StringContent($"{sha256Code}&grant_type=authorization_code", Encoding.UTF8,
+        using var tokenRequest = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint);
+        tokenRequest.Headers.Add("Accept", "application/json");
+        tokenRequest.Headers.Add("Authorization", "Basic REDA=");
+        tokenRequest.Content = new StringContent($"{sha256Code}&grant_type=authorization_code", Encoding.UTF8,
             "application/x-www-form-urlencoded");
-        response = HttpClient.SendAsync(httpRequest).Result;
+        using var tokenResponse = HttpClient.SendAsync(tokenRequest).GetAwaiter().GetResult();
 
-        return ExtractToken(response);
+        return ExtractToken(tokenResponse);
     }
 
     /// <summary>
