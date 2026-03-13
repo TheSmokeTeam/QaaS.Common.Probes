@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Sockets;
 using System.Text;
 using NUnit.Framework;
 using QaaS.Common.Probes.Extensions;
@@ -12,10 +11,7 @@ public class OpenshiftAuthenticationTests
     [Test]
     public void CreateKubernetesClient_WhenOauthEndpointsRespond_ReturnsAuthenticatedClient()
     {
-        var port = GetFreeTcpPort();
-        using var listener = new HttpListener();
-        listener.Prefixes.Add($"http://127.0.0.1:{port}/");
-        listener.Start();
+        using var listener = CreateStartedListener(out var port);
 
         var serverTask = Task.Run(async () =>
         {
@@ -72,12 +68,25 @@ public class OpenshiftAuthenticationTests
         context.Response.Close();
     }
 
-    private static int GetFreeTcpPort()
+    private static HttpListener CreateStartedListener(out int port)
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
-        return port;
+        for (var attempt = 0; attempt < 10; attempt++)
+        {
+            port = Random.Shared.Next(20000, 60000);
+            var listener = new HttpListener();
+            listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+
+            try
+            {
+                listener.Start();
+                return listener;
+            }
+            catch (HttpListenerException)
+            {
+                listener.Close();
+            }
+        }
+
+        throw new InvalidOperationException("Failed to bind an HTTP listener to a free local port.");
     }
 }
