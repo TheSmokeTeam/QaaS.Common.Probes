@@ -44,6 +44,31 @@ public class ReplicaSetUpdateExtensionsTests
     }
 
     [Test]
+    public void TestUpdateReplicaSetResources_WhenDesiredAndExistingValuesAreMissing_ShouldLeaveResourceMapsEmpty()
+    {
+        var template = new V1PodTemplateSpec
+        {
+            Spec = new V1PodSpec
+            {
+                Containers =
+                [
+                    new V1Container
+                    {
+                        Name = "app",
+                        Resources = new V1ResourceRequirements()
+                    }
+                ]
+            }
+        };
+
+        template.UpdateReplicaSetResources("app", "replica-set", null);
+        var resources = template.Spec.Containers.Single().Resources;
+
+        Assert.That(resources.Limits, Is.Empty);
+        Assert.That(resources.Requests, Is.Empty);
+    }
+
+    [Test]
     public void TestUpdateReplicaSetImage_ShouldUpdateContainerImage()
     {
         // Arrange

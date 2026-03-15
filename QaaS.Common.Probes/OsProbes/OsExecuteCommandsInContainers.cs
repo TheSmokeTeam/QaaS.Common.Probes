@@ -1,4 +1,5 @@
-﻿using System.Text;
+using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using k8s;
 using k8s.Autorest;
 using k8s.Models;
@@ -39,20 +40,24 @@ public class OsExecuteCommandsInContainers : BaseOsProbe<OsExecuteCommandsInCont
                 Context.Logger.LogDebug("Commands executed are: {ExecutedCommandsList}",
                     string.Join(", ", Configuration.Commands!));
 
-                var websocket = Kubernetes!
-                    .WebSocketNamespacedPodExecAsync(pod.Name(), pod.Namespace(), Configuration.Commands,
-                        container.Name).Result;
-                using var demux = new StreamDemuxer(websocket);
-                demux.Start();
-
-                var buff = new byte[4096];
-                var stream = demux.GetStream(1, 1);
-                _ = stream.Read(buff, 0, 4096);
-                var result = Encoding.Default.GetString(buff).Replace("\r", "").Replace("\n", "");
-
+                var result = ExecuteCommands(pod, container.Name);
                 Context.Logger.LogDebug("Result of command execution is {CommandExecutionResult}", result);
             }
         }
+    }
+
+    [ExcludeFromCodeCoverage]
+    protected virtual string ExecuteCommands(V1Pod pod, string containerName)
+    {
+        using var websocket = Kubernetes!
+            .WebSocketNamespacedPodExecAsync(pod.Name(), pod.Namespace(), Configuration.Commands, containerName)
+            .GetAwaiter().GetResult();
+        using var demux = new StreamDemuxer(websocket);
+        demux.Start();
+
+        using var stream = demux.GetStream(1, 1);
+        using var reader = new StreamReader(stream, Encoding.Default);
+        return reader.ReadToEnd().Replace("\r", "").Replace("\n", "");
     }
 
     /// <summary>

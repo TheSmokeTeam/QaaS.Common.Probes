@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using k8s;
 
 namespace QaaS.Common.Probes.Extensions;
@@ -5,6 +6,7 @@ namespace QaaS.Common.Probes.Extensions;
 /// <summary>
 /// Contains extension functions for kubernetes client
 /// </summary>
+[ExcludeFromCodeCoverage]
 public static class KubernetesClientExtensions
 {
     /// <summary>

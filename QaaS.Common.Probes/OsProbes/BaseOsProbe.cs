@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using k8s;
 using QaaS.Common.Probes.ConfigurationObjects.Os;
 using QaaS.Common.Probes.Extensions;
@@ -13,7 +14,8 @@ public abstract class BaseOsProbe<TOsProbeConfig> : BaseProbe<TOsProbeConfig>, I
 {
     protected Kubernetes? Kubernetes;
 
-    private Kubernetes CreateConnection()
+    [ExcludeFromCodeCoverage]
+    protected virtual Kubernetes CreateConnection()
     {
         var k8SClient = OpenshiftAuthentication.CreateKubernetesClient(Configuration.Openshift!.Cluster!,
             Configuration.Openshift.Username!, Configuration.Openshift.Password!);
