@@ -47,4 +47,35 @@ public class EmptyMongoDbCollectionTests
             It.IsAny<DeleteOptions?>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Test]
+    public void Run_WhenDeleteIsNotAcknowledged_ShouldStillIssueDeleteCommand()
+    {
+        var collectionMock = new Mock<IMongoCollection<BsonDocument>>();
+        var deleteResultMock = new Mock<DeleteResult>();
+        deleteResultMock.SetupGet(result => result.IsAcknowledged).Returns(false);
+        deleteResultMock.SetupGet(result => result.DeletedCount).Returns(99);
+        collectionMock.Setup(collection => collection.DeleteMany(
+                It.IsAny<FilterDefinition<BsonDocument>>(),
+                It.IsAny<DeleteOptions?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(deleteResultMock.Object);
+
+        var probe = new TestableEmptyMongoDbCollection(collectionMock.Object)
+        {
+            Configuration = new EmptyMongoDbCollectionConfig
+            {
+                ConnectionString = "mongodb://localhost:27017",
+                DatabaseName = "db",
+                CollectionName = "col"
+            },
+            Context = Globals.Context
+        };
+
+        Assert.DoesNotThrow(() => probe.Run([], []));
+        collectionMock.Verify(collection => collection.DeleteMany(
+            It.IsAny<FilterDefinition<BsonDocument>>(),
+            It.IsAny<DeleteOptions?>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
 }
