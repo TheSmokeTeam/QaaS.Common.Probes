@@ -14,6 +14,8 @@ namespace QaaS.Common.Probes.OsProbes;
 /// </summary>
 public class OsExecuteCommandsInContainers : BaseOsProbe<OsExecuteCommandsInContainersConfig>
 {
+    private static readonly TimeSpan OutputReadIdleTimeout = TimeSpan.FromMilliseconds(250);
+
     protected override void RunOsProbe()
     {
         var pods = new List<V1Pod>();
@@ -56,8 +58,36 @@ public class OsExecuteCommandsInContainers : BaseOsProbe<OsExecuteCommandsInCont
         demux.Start();
 
         using var stream = demux.GetStream(1, 1);
-        using var reader = new StreamReader(stream, Encoding.Default);
-        return reader.ReadToEnd().Replace("\r", "").Replace("\n", "");
+        return ReadAvailableOutput(stream).Replace("\r", "").Replace("\n", "");
+    }
+
+    private static string ReadAvailableOutput(Stream stream)
+    {
+        var builder = new StringBuilder();
+        var buffer = new byte[4096];
+
+        while (true)
+        {
+            using var cancellationTokenSource = new CancellationTokenSource(OutputReadIdleTimeout);
+
+            try
+            {
+                var bytesRead = stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationTokenSource.Token)
+                    .GetAwaiter().GetResult();
+                if (bytesRead <= 0)
+                {
+                    break;
+                }
+
+                builder.Append(Encoding.Default.GetString(buffer, 0, bytesRead));
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+        }
+
+        return builder.ToString();
     }
 
     /// <summary>
