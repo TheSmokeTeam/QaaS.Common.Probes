@@ -62,13 +62,16 @@ public class OsExecuteCommandsInContainers : BaseOsProbe<OsExecuteCommandsInCont
     }
 
     private static string ReadAvailableOutput(Stream stream)
+        => ReadAvailableOutput(stream, OutputReadIdleTimeout);
+
+    private static string ReadAvailableOutput(Stream stream, TimeSpan idleTimeout)
     {
         var builder = new StringBuilder();
         var buffer = new byte[4096];
 
         while (true)
         {
-            using var cancellationTokenSource = new CancellationTokenSource(OutputReadIdleTimeout);
+            using var cancellationTokenSource = new CancellationTokenSource(idleTimeout);
 
             try
             {

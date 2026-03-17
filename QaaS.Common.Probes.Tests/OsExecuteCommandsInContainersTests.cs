@@ -200,10 +200,11 @@ public class OsExecuteCommandsInContainersTests
     public void ReadAvailableOutput_WhenStreamNeverCloses_ReturnsBufferedContentAfterIdleTimeout()
     {
         var method = typeof(OsExecuteCommandsInContainers)
-            .GetMethod("ReadAvailableOutput", BindingFlags.NonPublic | BindingFlags.Static)!;
+            .GetMethod("ReadAvailableOutput", BindingFlags.NonPublic | BindingFlags.Static, null,
+                [typeof(Stream), typeof(TimeSpan)], null)!;
         using var stream = new NonTerminatingStream("hello\n"u8.ToArray());
 
-        var result = (string)method.Invoke(null, [stream])!;
+        var result = (string)method.Invoke(null, [stream, TimeSpan.FromMilliseconds(10)])!;
 
         Assert.That(result, Is.EqualTo("hello\n"));
     }
