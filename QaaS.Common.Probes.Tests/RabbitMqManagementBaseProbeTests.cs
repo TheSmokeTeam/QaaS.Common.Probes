@@ -10,10 +10,17 @@ public class RabbitMqManagementBaseProbeTests
     private sealed class TestableRabbitMqManagementProbe
         : BaseRabbitMqManagementProbe<UploadRabbitMqDefinitionsConfig>
     {
+        public string? ObservedManagementApiBaseUrl { get; private set; }
+
         public HttpClient InvokeCreateHttpClient() => CreateHttpClient();
+
+        public Task<string> InvokeSendManagementRequestAsync(HttpClient httpClient, HttpMethod method, string relativePath,
+            string? jsonPayload = null)
+            => SendManagementRequestAsync(httpClient, method, relativePath, jsonPayload);
 
         protected override void RunRabbitMqManagementProbe(HttpClient httpClient)
         {
+            ObservedManagementApiBaseUrl = ManagementApiBaseUrl;
         }
     }
 
@@ -79,5 +86,96 @@ public class RabbitMqManagementBaseProbeTests
         probe.Run([], []);
 
         Assert.That(probe.ManipulatedObjects, Is.EqualTo(new[] { "user-a", "user-b" }));
+    }
+
+    [Test]
+    public async Task SendManagementRequestAsync_WhenResponseHasNoContentAndRequestHasNoPayload_ShouldReturnEmptyString()
+    {
+        var handler = new HttpRecordingMessageHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.OK));
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://rabbit-host:15672/api/")
+        };
+
+        var probe = new TestableRabbitMqManagementProbe
+        {
+            Configuration = new UploadRabbitMqDefinitionsConfig
+            {
+                Host = "rabbit-host"
+            },
+            Context = Globals.Context
+        };
+
+        var response = await probe.InvokeSendManagementRequestAsync(httpClient, HttpMethod.Get, "definitions");
+
+        Assert.That(response, Is.Empty);
+        Assert.That(handler.Requests.Single().Body, Is.Null);
+    }
+
+    [Test]
+    public void SendManagementRequestAsync_WhenRequestFails_ShouldThrowInvalidOperationException()
+    {
+        var handler = new HttpRecordingMessageHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent("bad request")
+        });
+        using var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://rabbit-host:15672/api/")
+        };
+
+        var probe = new TestableRabbitMqManagementProbe
+        {
+            Configuration = new UploadRabbitMqDefinitionsConfig
+            {
+                Host = "rabbit-host"
+            },
+            Context = Globals.Context
+        };
+
+        var exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await probe.InvokeSendManagementRequestAsync(httpClient, HttpMethod.Delete, "users/qa-user"));
+
+        Assert.That(exception!.Message, Does.Contain("400"));
+        Assert.That(exception.Message, Does.Contain("bad request"));
+    }
+
+    [Test]
+    public void Run_WhenHttpClientHasNoBaseAddress_ShouldStoreEmptyManagementApiBaseUrl()
+    {
+        using var httpClient = new HttpClient(new HttpRecordingMessageHandler(_ =>
+            new HttpResponseMessage(System.Net.HttpStatusCode.OK)));
+
+        var probe = new TestableRabbitMqManagementProbe
+        {
+            Configuration = new UploadRabbitMqDefinitionsConfig
+            {
+                Host = "rabbit-host"
+            },
+            Context = Globals.Context
+        };
+
+        var overridingProbe = new TestableRabbitMqManagementProbeWithoutBaseAddress(httpClient)
+        {
+            Configuration = probe.Configuration,
+            Context = probe.Context
+        };
+
+        overridingProbe.Run([], []);
+
+        Assert.That(overridingProbe.ObservedManagementApiBaseUrl, Is.EqualTo(string.Empty));
+    }
+
+    private sealed class TestableRabbitMqManagementProbeWithoutBaseAddress(HttpClient httpClient)
+        : BaseRabbitMqManagementProbe<UploadRabbitMqDefinitionsConfig>
+    {
+        public string? ObservedManagementApiBaseUrl { get; private set; }
+
+        protected override HttpClient CreateHttpClient() => httpClient;
+
+        protected override void RunRabbitMqManagementProbe(HttpClient httpClient)
+        {
+            ObservedManagementApiBaseUrl = ManagementApiBaseUrl;
+        }
     }
 }

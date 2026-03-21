@@ -32,6 +32,11 @@ public class RabbitMqManagementProbesTests
         }
     }
 
+    private sealed class FileWritingDownloadRabbitMqDefinitions(HttpClient httpClient) : DownloadRabbitMqDefinitions
+    {
+        protected override HttpClient CreateHttpClient() => httpClient;
+    }
+
     private sealed class TestableCreateRabbitMqVirtualHosts(HttpClient httpClient) : CreateRabbitMqVirtualHosts
     {
         protected override HttpClient CreateHttpClient() => httpClient;
@@ -133,6 +138,24 @@ public class RabbitMqManagementProbesTests
     }
 
     [Test]
+    public void UploadRabbitMqDefinitions_WhenNeitherInlineNorFileDefinitionsProvided_ShouldThrow()
+    {
+        using var httpClient = CreateHttpClient(new HttpRecordingMessageHandler(_ =>
+            new HttpResponseMessage(System.Net.HttpStatusCode.OK)));
+
+        var probe = new TestableUploadRabbitMqDefinitions(httpClient)
+        {
+            Configuration = new UploadRabbitMqDefinitionsConfig
+            {
+                Host = "rabbit-host"
+            },
+            Context = Globals.Context
+        };
+
+        Assert.Throws<InvalidOperationException>(() => probe.Run([], []));
+    }
+
+    [Test]
     public void DownloadRabbitMqDefinitions_ShouldWriteReturnedDefinitionsToConfiguredPath()
     {
         var handler = new HttpRecordingMessageHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.OK)
@@ -159,6 +182,78 @@ public class RabbitMqManagementProbesTests
         Assert.That(request.RequestUri, Is.EqualTo("http://rabbit-host:15672/api/definitions/%2F"));
         Assert.That(probe.WrittenPath, Is.EqualTo("artifacts/definitions.json"));
         Assert.That(NormalizeJson(probe.WrittenContents!), Is.EqualTo(NormalizeJson("""{"exchanges":[{"name":"events"}]}""")));
+    }
+
+    [Test]
+    public void DownloadRabbitMqDefinitions_WhenVirtualHostIsNotProvided_ShouldUseClusterEndpoint()
+    {
+        var handler = new HttpRecordingMessageHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"queues":[]}""")
+        });
+        using var httpClient = CreateHttpClient(handler);
+
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var tempDirectory = Directory.CreateTempSubdirectory();
+        try
+        {
+            Directory.SetCurrentDirectory(tempDirectory.FullName);
+            var probe = new FileWritingDownloadRabbitMqDefinitions(httpClient)
+            {
+                Configuration = new DownloadRabbitMqDefinitionsConfig
+                {
+                    Host = "rabbit-host",
+                    DefinitionsFilePath = "definitions.json"
+                },
+                Context = Globals.Context
+            };
+
+            probe.Run([], []);
+
+            Assert.That(handler.Requests.Single().RequestUri, Is.EqualTo("http://rabbit-host:15672/api/definitions"));
+            Assert.That(File.Exists(Path.Combine(tempDirectory.FullName, "definitions.json")), Is.True);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(originalDirectory);
+            tempDirectory.Delete(true);
+        }
+    }
+
+    [Test]
+    public void DownloadRabbitMqDefinitions_WhenOutputDirectoryDoesNotExist_ShouldCreateIt()
+    {
+        var handler = new HttpRecordingMessageHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"queues":[{"name":"queue-a"}]}""")
+        });
+        using var httpClient = CreateHttpClient(handler);
+
+        var tempDirectory = Directory.CreateTempSubdirectory();
+        try
+        {
+            var nestedPath = Path.Combine(tempDirectory.FullName, "nested", "definitions.json");
+            var probe = new FileWritingDownloadRabbitMqDefinitions(httpClient)
+            {
+                Configuration = new DownloadRabbitMqDefinitionsConfig
+                {
+                    Host = "rabbit-host",
+                    DefinitionsFilePath = nestedPath,
+                    VirtualHostName = "qa"
+                },
+                Context = Globals.Context
+            };
+
+            probe.Run([], []);
+
+            Assert.That(File.Exists(nestedPath), Is.True);
+            Assert.That(NormalizeJson(File.ReadAllText(nestedPath)),
+                Is.EqualTo(NormalizeJson("""{"queues":[{"name":"queue-a"}]}""")));
+        }
+        finally
+        {
+            tempDirectory.Delete(true);
+        }
     }
 
     [Test]
@@ -195,6 +290,33 @@ public class RabbitMqManagementProbesTests
         Assert.That(request.RequestUri, Is.EqualTo("http://rabbit-host:15672/api/vhosts/%2F"));
         Assert.That(NormalizeJson(request.Body!), Is.EqualTo(NormalizeJson(
             """{"description":"default vhost","tags":"qa,shared","default_queue_type":"quorum","protected_from_deletion":true,"tracing":false}""")));
+    }
+
+    [Test]
+    public void CreateRabbitMqVirtualHosts_WhenTagsAreNotProvided_ShouldOmitTagsFromPayload()
+    {
+        var handler = new HttpRecordingMessageHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.Created));
+        using var httpClient = CreateHttpClient(handler);
+
+        var probe = new TestableCreateRabbitMqVirtualHosts(httpClient)
+        {
+            Configuration = new CreateRabbitMqVirtualHostsConfig
+            {
+                Host = "rabbit-host",
+                VirtualHosts =
+                [
+                    new RabbitMqVirtualHostConfig
+                    {
+                        Name = "qa"
+                    }
+                ]
+            },
+            Context = Globals.Context
+        };
+
+        probe.Run([], []);
+
+        Assert.That(NormalizeJson(handler.Requests.Single().Body!), Is.EqualTo(NormalizeJson("""{}""")));
     }
 
     [Test]
@@ -254,6 +376,36 @@ public class RabbitMqManagementProbesTests
         Assert.That(request.RequestUri, Is.EqualTo("http://rabbit-host:15672/api/users/qa-user"));
         Assert.That(NormalizeJson(request.Body!),
             Is.EqualTo(NormalizeJson("""{"password":"secret","tags":"administrator,monitoring"}""")));
+    }
+
+    [Test]
+    public void CreateRabbitMqUsers_WhenTagsAreNotProvided_ShouldOmitTagsFromPayload()
+    {
+        var handler = new HttpRecordingMessageHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.Created));
+        using var httpClient = CreateHttpClient(handler);
+
+        var probe = new TestableCreateRabbitMqUsers(httpClient)
+        {
+            Configuration = new CreateRabbitMqUsersConfig
+            {
+                Host = "rabbit-host",
+                Users =
+                [
+                    new RabbitMqUserConfig
+                    {
+                        Username = "qa-user",
+                        PasswordHash = "hash-value",
+                        HashingAlgorithm = "rabbit_password_hashing_sha256"
+                    }
+                ]
+            },
+            Context = Globals.Context
+        };
+
+        probe.Run([], []);
+
+        Assert.That(NormalizeJson(handler.Requests.Single().Body!),
+            Is.EqualTo(NormalizeJson("""{"password_hash":"hash-value","hashing_algorithm":"rabbit_password_hashing_sha256"}""")));
     }
 
     [Test]

@@ -37,6 +37,29 @@ public class RedisExecuteProbesTests
     }
 
     [Test]
+    public void ExecuteRedisCommand_WhenArgumentsAreNotProvided_ShouldInvokeCommandWithEmptyArgumentsArray()
+    {
+        var redisDbMock = new Mock<IDatabase>();
+        redisDbMock.Setup(m => m.Execute(It.IsAny<string>(), It.IsAny<object[]>()))
+            .Returns(RedisResult.Create(1L));
+
+        var probe = new ExecuteRedisCommand
+        {
+            Configuration = new RedisExecuteCommandConfig
+            {
+                Command = "PING"
+            },
+            Context = Globals.Context
+        };
+        SetRedisDbField(probe, redisDbMock.Object);
+
+        InvokeRunRedisProbe(probe);
+
+        redisDbMock.Verify(m => m.Execute("PING",
+            It.Is<object[]>(arguments => arguments.Length == 0)), Times.Once);
+    }
+
+    [Test]
     public void ExecuteRedisCommands_ShouldInvokeEveryConfiguredCommandInOrder()
     {
         var executedCommands = new List<(string Command, object[] Arguments)>();
@@ -74,6 +97,38 @@ public class RedisExecuteProbesTests
             Is.EqualTo(new[] { "key-1", "value-1" }));
         Assert.That(executedCommands[1].Arguments.Select(argument => argument.ToString()),
             Is.EqualTo(new[] { "key-1" }));
+    }
+
+    [Test]
+    public void ExecuteRedisCommands_WhenCommandHasNoArguments_ShouldExecuteItWithEmptyArgumentsArray()
+    {
+        var executedCommands = new List<(string Command, object[] Arguments)>();
+        var redisDbMock = new Mock<IDatabase>();
+        redisDbMock.Setup(m => m.Execute(It.IsAny<string>(), It.IsAny<object[]>()))
+            .Callback<string, object[]>((command, arguments) => executedCommands.Add((command, arguments)))
+            .Returns(RedisResult.Create(1L));
+
+        var probe = new ExecuteRedisCommands
+        {
+            Configuration = new RedisExecuteCommandsConfig
+            {
+                Commands =
+                [
+                    new RedisCommandConfig
+                    {
+                        Command = "PING"
+                    }
+                ]
+            },
+            Context = Globals.Context
+        };
+        SetRedisDbField(probe, redisDbMock.Object);
+
+        InvokeRunRedisProbe(probe);
+
+        Assert.That(executedCommands, Has.Count.EqualTo(1));
+        Assert.That(executedCommands[0].Command, Is.EqualTo("PING"));
+        Assert.That(executedCommands[0].Arguments, Is.Empty);
     }
 
     private static void InvokeRunRedisProbe(object probe)
