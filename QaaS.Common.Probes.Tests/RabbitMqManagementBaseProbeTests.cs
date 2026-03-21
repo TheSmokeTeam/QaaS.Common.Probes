@@ -65,6 +65,34 @@ public class RabbitMqManagementBaseProbeTests
     }
 
     [Test]
+    public void CreateHttpClient_ShouldPreserveUnicodeCredentialsInAuthorizationHeader()
+    {
+        var probe = new TestableRabbitMqManagementProbe
+        {
+            Configuration = new UploadRabbitMqDefinitionsConfig
+            {
+                Host = "rabbit-host",
+                Username = "us\u00E9r",
+                Password = "p\u00E4ss"
+            },
+            Context = Globals.Context
+        };
+
+        using var httpClient = probe.InvokeCreateHttpClient();
+
+        Assert.That(httpClient.DefaultRequestHeaders.Authorization, Is.Not.Null);
+        Assert.That(httpClient.DefaultRequestHeaders.Authorization!.Parameter, Is.EqualTo("dXPDqXI6cMOkc3M="));
+    }
+
+    [Test]
+    public void ManagementConfig_DefaultsToTlsValidationEnabled()
+    {
+        var configuration = new UploadRabbitMqDefinitionsConfig();
+
+        Assert.That(configuration.AllowInvalidServerCertificates, Is.False);
+    }
+
+    [Test]
     public void Run_ShouldManipulateEveryConfiguredObject()
     {
         var handler = new HttpRecordingMessageHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.OK));

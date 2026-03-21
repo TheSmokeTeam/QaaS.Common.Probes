@@ -30,7 +30,7 @@ public abstract class BaseRabbitMqManagementProbe<TRabbitMqManagementConfig> : B
         };
 
         var credentials = Convert.ToBase64String(
-            Encoding.ASCII.GetBytes($"{Configuration.Username}:{Configuration.Password}"));
+            Encoding.UTF8.GetBytes($"{Configuration.Username}:{Configuration.Password}"));
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 

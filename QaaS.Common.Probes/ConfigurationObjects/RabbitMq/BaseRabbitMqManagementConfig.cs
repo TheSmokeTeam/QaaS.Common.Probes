@@ -11,8 +11,8 @@ public abstract record BaseRabbitMqManagementConfig : BaseRabbitMqConfig
     [Range(0, 65535), Description("Rabbitmq management API port"), DefaultValue(15672)]
     public int ManagementPort { get; set; } = 15672;
 
-    [Description("Allow invalid TLS certificates when using HTTPS"), DefaultValue(true)]
-    public bool AllowInvalidServerCertificates { get; set; } = true;
+    [Description("Allow invalid TLS certificates when using HTTPS"), DefaultValue(false)]
+    public bool AllowInvalidServerCertificates { get; set; }
 
     [Range(1, int.MaxValue), Description("Rabbitmq management API request timeout in milliseconds"),
      DefaultValue(30000)]
