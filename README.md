@@ -30,8 +30,9 @@ The solution is split into a publishable NuGet package for shared probe implemen
 ## Functionalities
 ### [QaaS.Common.Probes](./QaaS.Common.Probes/)
 - OpenShift/Kubernetes probes for pod scaling, image/resource updates, env var mutation, config-map YAML edits, pod restarts, and command execution in containers.
-- RabbitMQ probes for queue/exchange create/delete, binding create/delete, and queue purge operations.
-- Redis probes for `FLUSHALL`, `FLUSHDB`, and chunked key cleanup via `SCAN` + delete.
+- RabbitMQ probes for queue/exchange create/delete, binding create/delete, queue purge operations, definitions import/export, virtual-host/user management, and permission management through the management API.
+- Redis probes for `FLUSHALL`, `FLUSHDB`, chunked key cleanup via `SCAN` + delete, and arbitrary command execution.
+- MongoDB probes for collection cleanup.
 - S3 probes for bucket object cleanup (optional prefix) and bucket deletion flows.
 - SQL probes for table truncation in MSSQL, PostgreSQL, and Oracle.
 - Elastic probes for index cleanup by index pattern and query string.
@@ -47,8 +48,8 @@ Supported operational targets in `QaaS.Common.Probes`:
 | Family | Implementations |
 |---|---|
 | Container Orchestration | OpenShift/Kubernetes |
-| Messaging / Queueing | RabbitMQ |
-| Databases / Cache | Redis, MSSQL, PostgreSQL, Oracle |
+| Messaging / Queueing | RabbitMQ, RabbitMQ Management API |
+| Databases / Cache | MongoDB, Redis, MSSQL, PostgreSQL, Oracle |
 | Search / Indexing | Elasticsearch |
 | Object Storage | S3 |
 
