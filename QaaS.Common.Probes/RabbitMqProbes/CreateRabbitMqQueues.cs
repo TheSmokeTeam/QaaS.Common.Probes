@@ -4,6 +4,9 @@ using RabbitMQ.Client;
 
 namespace QaaS.Common.Probes.RabbitMqProbes;
 
+/// <summary>
+/// Creates one or more RabbitMQ queues with the configured queue arguments.
+/// </summary>
 public class CreateRabbitMqQueues : BaseRabbitMqObjectsManipulation<CreateRabbitMqQueuesConfig, RabbitMqQueueConfig>
 {
     protected override IEnumerable<RabbitMqQueueConfig> GetObjectsToManipulateConfigurations() => Configuration.Queues!;

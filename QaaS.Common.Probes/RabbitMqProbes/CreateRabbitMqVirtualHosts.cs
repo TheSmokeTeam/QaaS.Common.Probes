@@ -5,6 +5,9 @@ using QaaS.Common.Probes.ConfigurationObjects.RabbitMq;
 
 namespace QaaS.Common.Probes.RabbitMqProbes;
 
+/// <summary>
+/// Creates RabbitMQ virtual hosts through the management API so later probes and sessions can use them.
+/// </summary>
 public class CreateRabbitMqVirtualHosts
     : BaseRabbitMqManagementObjectsManipulation<CreateRabbitMqVirtualHostsConfig, RabbitMqVirtualHostConfig>
 {

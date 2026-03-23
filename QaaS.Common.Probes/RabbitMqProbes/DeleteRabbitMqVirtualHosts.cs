@@ -3,6 +3,9 @@ using QaaS.Common.Probes.ConfigurationObjects.RabbitMq;
 
 namespace QaaS.Common.Probes.RabbitMqProbes;
 
+/// <summary>
+/// Deletes RabbitMQ virtual hosts through the management API.
+/// </summary>
 public class DeleteRabbitMqVirtualHosts
     : BaseRabbitMqManagementObjectsManipulation<DeleteRabbitMqVirtualHostsConfig, string>
 {

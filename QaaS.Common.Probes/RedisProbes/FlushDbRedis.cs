@@ -3,6 +3,9 @@ using QaaS.Common.Probes.ConfigurationObjects.Redis;
 
 namespace QaaS.Common.Probes.RedisProbes;
 
+/// <summary>
+/// Runs Redis FLUSHDB against the selected Redis database.
+/// </summary>
 public class FlushDbRedis : BaseRedisProbe<RedisDataBaseProbeBaseConfig>
 {
     private const string FlushDbCommand = "FLUSHDB";

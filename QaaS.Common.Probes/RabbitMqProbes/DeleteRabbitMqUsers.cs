@@ -3,6 +3,9 @@ using QaaS.Common.Probes.ConfigurationObjects.RabbitMq;
 
 namespace QaaS.Common.Probes.RabbitMqProbes;
 
+/// <summary>
+/// Deletes RabbitMQ users through the management API.
+/// </summary>
 public class DeleteRabbitMqUsers : BaseRabbitMqManagementObjectsManipulation<DeleteRabbitMqUsersConfig, string>
 {
     protected override IEnumerable<string> GetObjectsToManipulateConfigurations() => Configuration.Usernames!;

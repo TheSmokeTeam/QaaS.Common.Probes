@@ -3,6 +3,9 @@ using QaaS.Common.Probes.ConfigurationObjects.Redis;
 
 namespace QaaS.Common.Probes.RedisProbes;
 
+/// <summary>
+/// Executes one Redis command with optional arguments against the selected Redis database.
+/// </summary>
 public class ExecuteRedisCommand : BaseRedisProbe<RedisExecuteCommandConfig>
 {
     protected override void RunRedisProbe()

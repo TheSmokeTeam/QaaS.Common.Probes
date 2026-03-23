@@ -4,6 +4,9 @@ using QaaS.Common.Probes.ConfigurationObjects.RabbitMq;
 
 namespace QaaS.Common.Probes.RabbitMqProbes;
 
+/// <summary>
+/// Creates or updates RabbitMQ permissions for users in one or more virtual hosts through the management API.
+/// </summary>
 public class UpsertRabbitMqPermissions
     : BaseRabbitMqManagementObjectsManipulation<UpsertRabbitMqPermissionsConfig, RabbitMqPermissionConfig>
 {
