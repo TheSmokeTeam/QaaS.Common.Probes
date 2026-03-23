@@ -5,6 +5,9 @@ using QaaS.Common.Probes.Extensions;
 
 namespace QaaS.Common.Probes.OsProbes;
 
+/// <summary>
+/// Updates the image of one container in a Kubernetes or OpenShift stateful set.
+/// </summary>
 public class OsUpdateStatefulSetImage
     : BaseOsUpdateStatefulSet<OsUpdateImageProbeConfig>
 {

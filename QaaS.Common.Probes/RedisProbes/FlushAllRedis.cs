@@ -3,6 +3,9 @@ using QaaS.Framework.Protocols.ConfigurationObjects.Redis;
 
 namespace QaaS.Common.Probes.RedisProbes;
 
+/// <summary>
+/// Runs Redis FLUSHALL against the configured server to remove keys from every database.
+/// </summary>
 public class FlushAllRedis : BaseRedisProbe<BaseRedisConfig>
 {
     private const string FlushAllCommand = "FLUSHALL";

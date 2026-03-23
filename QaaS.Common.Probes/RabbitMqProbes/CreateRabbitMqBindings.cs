@@ -4,6 +4,9 @@ using RabbitMQ.Client;
 
 namespace QaaS.Common.Probes.RabbitMqProbes;
 
+/// <summary>
+/// Creates RabbitMQ bindings between exchanges and queues or between exchanges by using the configured binding definitions.
+/// </summary>
 public class CreateRabbitMqBindings
     : BaseRabbitMqObjectsManipulation<RabbitMqBindingsConfig, RabbitMqBindingConfig>
 {

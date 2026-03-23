@@ -4,6 +4,9 @@ using RabbitMQ.Client;
 
 namespace QaaS.Common.Probes.RabbitMqProbes;
 
+/// <summary>
+/// Deletes RabbitMQ bindings using the configured source, destination, routing key, and binding type.
+/// </summary>
 public class DeleteRabbitMqBindings
     : BaseRabbitMqObjectsManipulation<RabbitMqBindingsConfig, RabbitMqBindingConfig>
 {

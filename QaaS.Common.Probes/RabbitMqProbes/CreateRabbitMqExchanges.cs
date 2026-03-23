@@ -4,6 +4,9 @@ using RabbitMQ.Client;
 
 namespace QaaS.Common.Probes.RabbitMqProbes;
 
+/// <summary>
+/// Creates one or more RabbitMQ exchanges with the configured durability, auto-delete, and arguments.
+/// </summary>
 public class
     CreateRabbitMqExchanges
     : BaseRabbitMqObjectsManipulation<CreateRabbitMqExchangesConfig, RabbitMqExchangeConfig>

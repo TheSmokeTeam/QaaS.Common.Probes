@@ -5,7 +5,7 @@ namespace QaaS.Common.Probes.ConfigurationObjects.Os;
 
 public record Openshift
 {
-    [Required, Description("The openshift cluster api (for example REDA)")]
+    [Required, Description("The openshift cluster api")]
     public string? Cluster { get; set; }
 
     [Required, Description("Username with access to the openshift namespace and application")]
