@@ -50,8 +50,14 @@ public class PostgreSqlDataBaseTablesTruncateIntegrationTests
                 Context = Globals.Context
             };
 
-            probe.Run(ImmutableList<SessionData>.Empty, ImmutableList<DataSource>.Empty);
-            probe.Dispose();
+            try
+            {
+                probe.Run(ImmutableList<SessionData>.Empty, ImmutableList<DataSource>.Empty);
+            }
+            finally
+            {
+                probe.Dispose();
+            }
 
             using var verifyCommand = setupConnection.CreateCommand();
             verifyCommand.CommandText = $"SELECT COUNT(*) FROM {tableName};";
