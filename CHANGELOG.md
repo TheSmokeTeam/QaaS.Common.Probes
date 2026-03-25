@@ -4,6 +4,8 @@ This file is generated automatically from CI from git history.
 
 ## Unreleased
 
+- test(postgresql): dispose truncate probe on failure
+- test(postgresql): cover geometry truncate probe
 - chore(deps): bump framework packages
 - fix(probes): remove reda reference from openshift api
 - docs(probes): add hook XML summaries
@@ -11,6 +13,14 @@ This file is generated automatically from CI from git history.
 
 ## 1.1.3-alpha.1 - 2026-03-22
 
+- No changes recorded.
+
+## 1.1.3 - 2026-03-23
+
+- chore(deps): bump framework packages
+- fix(probes): remove reda reference from openshift api
+- docs(probes): add hook XML summaries
+- docs(changelog): add automated changelog
 - chore: consume framework 1.2.5-alpha.4
 
 ## 1.1.2 - 2026-03-21
