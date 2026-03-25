@@ -4,6 +4,7 @@ This file is generated automatically from CI from git history.
 
 ## Unreleased
 
+- test(postgresql): dispose truncate probe on failure
 - test(postgresql): cover geometry truncate probe
 - chore(deps): bump framework packages
 - fix(probes): remove reda reference from openshift api
