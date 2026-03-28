@@ -364,6 +364,94 @@ public class RedisExecuteProbesTests
             Is.EqualTo(new[] { "1" }));
     }
 
+    [Test]
+    public void ExecuteRedisCommands_WhenRepeatUntilPathResolvesToCollection_ShouldThrowMeaningfulError()
+    {
+        var redisDbMock = new Mock<IDatabase>();
+        redisDbMock.Setup(m => m.Execute(It.IsAny<string>(), It.IsAny<object[]>()))
+            .Returns(RedisResult.Create([
+                RedisResult.Create((RedisValue)"0"),
+                RedisResult.Create(new RedisValue[] { "key-1", "key-2" })
+            ]));
+
+        var probe = new ExecuteRedisCommands
+        {
+            Configuration = new RedisExecuteCommandsConfig
+            {
+                Commands =
+                [
+                    new RedisCommandConfig
+                    {
+                        Command = "SCAN",
+                        Arguments = ["0", "MATCH", "duplication:*", "COUNT", "1000"],
+                        StoreResultAs = "scanResult"
+                    }
+                ],
+                RepeatUntil = new RedisCommandLoopConfig
+                {
+                    ResultPath = "scanResult",
+                    ExpectedValue = "0",
+                    MaxIterations = 2
+                }
+            },
+            Context = CreateContext()
+        };
+
+        SetRedisDbField(probe, redisDbMock.Object);
+
+        var exception = Assert.Throws<TargetInvocationException>(() => InvokeRunRedisProbe(probe));
+        Assert.That(exception!.InnerException, Is.TypeOf<InvalidOperationException>());
+        Assert.That(exception.InnerException!.Message,
+            Does.Contain("resolved to a collection and cannot be used as a scalar value"));
+    }
+
+    [Test]
+    public void ExecuteRedisCommand_WhenBinaryResultIsStored_ShouldReuseRawBytes()
+    {
+        var binaryPayload = new byte[] { 0, 1, 2, 255 };
+        var executedCommands = new List<(string Command, object[] Arguments)>();
+        var results = new Queue<RedisResult>([
+            RedisResult.Create((RedisValue)binaryPayload),
+            RedisResult.Create((RedisValue)"OK")
+        ]);
+        var redisDbMock = new Mock<IDatabase>();
+        redisDbMock.Setup(m => m.Execute(It.IsAny<string>(), It.IsAny<object[]>()))
+            .Callback<string, object[]>((command, arguments) => executedCommands.Add((command, arguments)))
+            .Returns(() => results.Dequeue());
+
+        var context = CreateContext();
+        var dumpProbe = new ExecuteRedisCommand
+        {
+            Configuration = new RedisExecuteCommandConfig
+            {
+                Command = "DUMP",
+                Arguments = ["source-key"],
+                StoreResultAs = "dumpResult"
+            },
+            Context = context
+        };
+
+        var restoreProbe = new ExecuteRedisCommand
+        {
+            Configuration = new RedisExecuteCommandConfig
+            {
+                Command = "RESTORE",
+                Arguments = ["target-key", "0", "${redisResults:dumpResult}"]
+            },
+            Context = context
+        };
+
+        SetRedisDbField(dumpProbe, redisDbMock.Object);
+        SetRedisDbField(restoreProbe, redisDbMock.Object);
+
+        InvokeRunRedisProbe(dumpProbe);
+        InvokeRunRedisProbe(restoreProbe);
+
+        Assert.That(executedCommands.Select(entry => entry.Command), Is.EqualTo(new[] { "DUMP", "RESTORE" }));
+        Assert.That(executedCommands[1].Arguments[2], Is.TypeOf<byte[]>());
+        Assert.That((byte[])executedCommands[1].Arguments[2], Is.EqualTo(binaryPayload));
+    }
+
     private static void InvokeRunRedisProbe(object probe)
     {
         var method = probe.GetType().GetMethod("RunRedisProbe", BindingFlags.NonPublic | BindingFlags.Instance)!;

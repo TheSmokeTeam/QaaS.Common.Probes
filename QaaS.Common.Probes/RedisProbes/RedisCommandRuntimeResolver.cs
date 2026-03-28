@@ -55,18 +55,18 @@ internal static partial class RedisCommandRuntimeResolver
     }
 
     public static string ResolveStoredResultAsString(Context context, string resultPath)
-        => ConvertScalarToString(ResolvePlaceholderValue(context, resultPath));
+    {
+        var resolvedValue = ResolvePlaceholderValue(context, resultPath);
+        EnsureScalarValue(resultPath, resolvedValue);
+        return ConvertScalarToString(resolvedValue);
+    }
 
     private static string ReplaceScalarPlaceholders(Context context, string value)
     {
         return RedisResultsPlaceholderRegex().Replace(value, match =>
         {
             var resolvedValue = ResolvePlaceholderValue(context, match.Groups["path"].Value);
-            if (resolvedValue is IEnumerable and not string and not byte[])
-            {
-                throw new InvalidOperationException(
-                    $"Redis placeholder '{match.Value}' resolved to a collection and cannot be used as a scalar value.");
-            }
+            EnsureScalarValue(match.Value, resolvedValue);
 
             return ConvertScalarToString(resolvedValue);
         });
@@ -195,6 +195,15 @@ internal static partial class RedisCommandRuntimeResolver
         }
 
         return (string?)result;
+    }
+
+    private static void EnsureScalarValue(string valueDescription, object? value)
+    {
+        if (value is IEnumerable and not string and not byte[])
+        {
+            throw new InvalidOperationException(
+                $"Redis value '{valueDescription}' resolved to a collection and cannot be used as a scalar value.");
+        }
     }
 
     private static string ConvertScalarToString(object? value)
