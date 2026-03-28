@@ -8,6 +8,7 @@ namespace QaaS.Common.Probes.OsProbes;
 /// <summary>
 /// Probe that changes the environment variables of a deployment
 /// </summary>
+/// <qaas-docs group="Cluster orchestration" subgroup="Environment variables" />
 public class OsChangeDeploymentEnvVars :
     BaseOsUpdateDeployment<OsChangeEnvVarsConfig>
 {

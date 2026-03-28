@@ -12,6 +12,7 @@ namespace QaaS.Common.Probes.OsProbes;
 /// Probe that Executes a command passed by the `cmd` string variable on every pod and container
 /// if passed to the function
 /// </summary>
+/// <qaas-docs group="Cluster orchestration" subgroup="In-container commands" />
 public class OsExecuteCommandsInContainers : BaseOsProbe<OsExecuteCommandsInContainersConfig>
 {
     private static readonly TimeSpan OutputReadIdleTimeout = TimeSpan.FromMilliseconds(250);

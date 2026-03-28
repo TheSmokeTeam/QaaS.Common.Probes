@@ -7,6 +7,7 @@ namespace QaaS.Common.Probes.OsProbes;
 /// <summary>
 /// Probe that scales openshift deployments
 /// </summary>
+/// <qaas-docs group="Cluster orchestration" subgroup="Scaling" />
 public class OsScaleDeploymentPods
     : BaseOsUpdateDeployment<OsScalePodsProbeConfig>
 {

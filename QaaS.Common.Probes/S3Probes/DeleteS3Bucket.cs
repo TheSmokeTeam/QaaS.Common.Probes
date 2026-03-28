@@ -6,6 +6,7 @@ namespace QaaS.Common.Probes.S3Probes;
 /// <summary>
 /// Probe to delete a s3 bucket
 /// </summary>
+/// <qaas-docs group="Databases" subgroup="S3" />
 public class DeleteS3Bucket : BaseS3Probe<DeleteS3BucketConfig>
 {
     protected override void RunS3Probe()

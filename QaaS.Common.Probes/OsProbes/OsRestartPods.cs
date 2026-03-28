@@ -10,6 +10,7 @@ namespace QaaS.Common.Probes.OsProbes;
 /// <summary>
 /// Probe that restarts all pods with configured labels in the configured namespace
 /// </summary>
+/// <qaas-docs group="Cluster orchestration" subgroup="Pod restarts" />
 public class OsRestartPods : BaseOsProbe<OsRestartPodsConfig>
 {
     protected override void RunOsProbe()

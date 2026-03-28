@@ -8,6 +8,7 @@ namespace QaaS.Common.Probes.OsProbes;
 /// <summary>
 /// Updates container resource requests and limits in a Kubernetes or OpenShift deployment.
 /// </summary>
+/// <qaas-docs group="Cluster orchestration" subgroup="Resource tuning" />
 public class OsUpdateDeploymentResources
     : BaseOsUpdateDeployment<OsUpdateResourcesProbeConfig>
 {

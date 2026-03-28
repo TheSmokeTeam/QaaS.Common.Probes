@@ -7,6 +7,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// <summary>
 /// Creates RabbitMQ bindings between exchanges and queues or between exchanges by using the configured binding definitions.
 /// </summary>
+/// <qaas-docs group="RabbitMQ administration" subgroup="Bindings lifecycle" />
 public class CreateRabbitMqBindings
     : BaseRabbitMqObjectsManipulation<RabbitMqBindingsConfig, RabbitMqBindingConfig>
 {

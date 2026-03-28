@@ -6,6 +6,7 @@ namespace QaaS.Common.Probes.RedisProbes;
 /// <summary>
 /// Runs Redis FLUSHALL against the configured server to remove keys from every database.
 /// </summary>
+/// <qaas-docs group="Redis maintenance" subgroup="Database flush" />
 public class FlushAllRedis : BaseRedisProbe<BaseRedisConfig>
 {
     private const string FlushAllCommand = "FLUSHALL";

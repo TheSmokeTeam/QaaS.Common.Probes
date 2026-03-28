@@ -7,6 +7,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// <summary>
 /// Creates one or more RabbitMQ exchanges with the configured durability, auto-delete, and arguments.
 /// </summary>
+/// <qaas-docs group="RabbitMQ administration" subgroup="Exchanges lifecycle" />
 public class
     CreateRabbitMqExchanges
     : BaseRabbitMqObjectsManipulation<CreateRabbitMqExchangesConfig, RabbitMqExchangeConfig>

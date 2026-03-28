@@ -8,6 +8,7 @@ namespace QaaS.Common.Probes.OsProbes;
 /// <summary>
 /// Updates container resource requests and limits in a Kubernetes or OpenShift stateful set.
 /// </summary>
+/// <qaas-docs group="Cluster orchestration" subgroup="Resource tuning" />
 public class OsUpdateStatefulSetResources : BaseOsUpdateStatefulSet<OsUpdateResourcesProbeConfig>
 {
     protected override V1StatefulSet UpdateReplicaSet(V1StatefulSet replicaSet)

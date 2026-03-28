@@ -8,6 +8,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// <summary>
 /// Creates RabbitMQ users through the management API with the configured credentials and tags.
 /// </summary>
+/// <qaas-docs group="RabbitMQ administration" subgroup="Users lifecycle" />
 public class CreateRabbitMqUsers
     : BaseRabbitMqManagementObjectsManipulation<CreateRabbitMqUsersConfig, RabbitMqUserConfig>
 {

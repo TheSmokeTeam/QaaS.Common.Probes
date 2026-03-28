@@ -6,6 +6,7 @@ namespace QaaS.Common.Probes.S3Probes;
 /// <summary>
 /// Probe to empty a s3 bucket according to a certain prefix
 /// </summary>
+/// <qaas-docs group="Databases" subgroup="S3" />
 public class EmptyS3Bucket : BaseS3Probe<EmptyS3BucketConfig>
 {
     protected override void RunS3Probe()

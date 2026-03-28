@@ -7,6 +7,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// <summary>
 /// Probe that deletes rabbitmq exchanges
 /// </summary>
+/// <qaas-docs group="RabbitMQ administration" subgroup="Exchanges lifecycle" />
 public class DeleteRabbitMqExchanges : BaseRabbitMqObjectsManipulation<DeleteRabbitMqExchangesConfig, string>
 {
     protected override IEnumerable<string> GetObjectsToManipulateConfigurations()

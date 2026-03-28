@@ -8,6 +8,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// <summary>
 /// Creates RabbitMQ virtual hosts through the management API so later probes and sessions can use them.
 /// </summary>
+/// <qaas-docs group="RabbitMQ administration" subgroup="Virtual hosts lifecycle" />
 public class CreateRabbitMqVirtualHosts
     : BaseRabbitMqManagementObjectsManipulation<CreateRabbitMqVirtualHostsConfig, RabbitMqVirtualHostConfig>
 {

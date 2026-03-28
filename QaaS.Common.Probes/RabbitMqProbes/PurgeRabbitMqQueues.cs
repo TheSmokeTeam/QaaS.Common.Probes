@@ -7,6 +7,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// <summary>
 /// Probe that purges rabbitmq queues
 /// </summary>
+/// <qaas-docs group="RabbitMQ administration" subgroup="Queues lifecycle" />
 public class PurgeRabbitMqQueues
     : BaseRabbitMqObjectsManipulation<PurgeRabbitMqQueuesConfig, string>
 {

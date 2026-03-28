@@ -8,6 +8,7 @@ namespace QaaS.Common.Probes.OsProbes;
 /// <summary>
 /// Probe that changes the environment variables of a statefulSet
 /// </summary>
+/// <qaas-docs group="Cluster orchestration" subgroup="Environment variables" />
 public class OsChangeStatefulSetEnvVars :
     BaseOsUpdateStatefulSet<OsChangeEnvVarsConfig>
 {

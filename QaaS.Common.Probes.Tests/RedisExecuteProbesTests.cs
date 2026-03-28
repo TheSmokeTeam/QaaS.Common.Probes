@@ -1,8 +1,12 @@
 using System.Reflection;
+using System.Text;
 using Moq;
 using NUnit.Framework;
 using QaaS.Common.Probes.ConfigurationObjects.Redis;
 using QaaS.Common.Probes.RedisProbes;
+using QaaS.Framework.SDK.ContextObjects;
+using QaaS.Framework.SDK.Session.SessionDataObjects;
+using QaaS.Framework.SDK.Session.SessionDataObjects.RunningSessionsObjects;
 using StackExchange.Redis;
 
 namespace QaaS.Common.Probes.Tests;
@@ -24,7 +28,7 @@ public class RedisExecuteProbesTests
                 Command = "SET",
                 Arguments = ["key-1", "value-1"]
             },
-            Context = Globals.Context
+            Context = CreateContext()
         };
         SetRedisDbField(probe, redisDbMock.Object);
 
@@ -49,7 +53,7 @@ public class RedisExecuteProbesTests
             {
                 Command = "PING"
             },
-            Context = Globals.Context
+            Context = CreateContext()
         };
         SetRedisDbField(probe, redisDbMock.Object);
 
@@ -86,7 +90,7 @@ public class RedisExecuteProbesTests
                     }
                 ]
             },
-            Context = Globals.Context
+            Context = CreateContext()
         };
         SetRedisDbField(probe, redisDbMock.Object);
 
@@ -120,7 +124,7 @@ public class RedisExecuteProbesTests
                     }
                 ]
             },
-            Context = Globals.Context
+            Context = CreateContext()
         };
         SetRedisDbField(probe, redisDbMock.Object);
 
@@ -129,6 +133,364 @@ public class RedisExecuteProbesTests
         Assert.That(executedCommands, Has.Count.EqualTo(1));
         Assert.That(executedCommands[0].Command, Is.EqualTo("PING"));
         Assert.That(executedCommands[0].Arguments, Is.Empty);
+    }
+
+    [Test]
+    public void ExecuteRedisCommand_WhenResultIsStored_ShouldAllowLaterProbeToReuseIt()
+    {
+        var executedCommands = new List<(string Command, object[] Arguments)>();
+        var results = new Queue<RedisResult>([
+            RedisResult.Create([
+                RedisResult.Create((RedisValue)"0"),
+                RedisResult.Create(new RedisValue[] { "key-1", "key-2" })
+            ]),
+            RedisResult.Create(2L)
+        ]);
+        var redisDbMock = new Mock<IDatabase>();
+        redisDbMock.Setup(m => m.Execute(It.IsAny<string>(), It.IsAny<object[]>()))
+            .Callback<string, object[]>((command, arguments) => executedCommands.Add((command, arguments)))
+            .Returns(() => results.Dequeue());
+
+        var context = CreateContext();
+        var scanProbe = new ExecuteRedisCommand
+        {
+            Configuration = new RedisExecuteCommandConfig
+            {
+                Command = "SCAN",
+                Arguments = ["0", "MATCH", "duplication:*", "COUNT", "1000"],
+                StoreResultAs = "scanResult"
+            },
+            Context = context
+        };
+
+        var deleteProbe = new ExecuteRedisCommand
+        {
+            Configuration = new RedisExecuteCommandConfig
+            {
+                Command = "DEL",
+                Arguments = ["${redisResults:scanResult:1}"]
+            },
+            Context = context
+        };
+
+        SetRedisDbField(scanProbe, redisDbMock.Object);
+        SetRedisDbField(deleteProbe, redisDbMock.Object);
+
+        InvokeRunRedisProbe(scanProbe);
+        InvokeRunRedisProbe(deleteProbe);
+
+        Assert.That(executedCommands.Select(entry => entry.Command), Is.EqualTo(new[] { "SCAN", "DEL" }));
+        Assert.That(executedCommands[1].Arguments.Select(FormatArgument),
+            Is.EqualTo(new[] { "key-1", "key-2" }));
+    }
+
+    [Test]
+    public void ExecuteRedisCommands_WhenStoredResultReferencedByLaterCommand_ShouldExpandArguments()
+    {
+        var executedCommands = new List<(string Command, object[] Arguments)>();
+        var results = new Queue<RedisResult>([
+            RedisResult.Create([
+                RedisResult.Create((RedisValue)"0"),
+                RedisResult.Create(new RedisValue[] { "key-1", "key-2" })
+            ]),
+            RedisResult.Create(2L)
+        ]);
+        var redisDbMock = new Mock<IDatabase>();
+        redisDbMock.Setup(m => m.Execute(It.IsAny<string>(), It.IsAny<object[]>()))
+            .Callback<string, object[]>((command, arguments) => executedCommands.Add((command, arguments)))
+            .Returns(() => results.Dequeue());
+
+        var probe = new ExecuteRedisCommands
+        {
+            Configuration = new RedisExecuteCommandsConfig
+            {
+                Commands =
+                [
+                    new RedisCommandConfig
+                    {
+                        Command = "SCAN",
+                        Arguments = ["0", "MATCH", "duplication:*", "COUNT", "1000"],
+                        StoreResultAs = "scanResult"
+                    },
+                    new RedisCommandConfig
+                    {
+                        Command = "DEL",
+                        Arguments = ["${redisResults:scanResult:1}"]
+                    }
+                ]
+            },
+            Context = CreateContext()
+        };
+
+        SetRedisDbField(probe, redisDbMock.Object);
+
+        InvokeRunRedisProbe(probe);
+
+        Assert.That(executedCommands.Select(entry => entry.Command), Is.EqualTo(new[] { "SCAN", "DEL" }));
+        Assert.That(executedCommands[1].Arguments.Select(FormatArgument),
+            Is.EqualTo(new[] { "key-1", "key-2" }));
+    }
+
+    [Test]
+    public void ExecuteRedisCommands_WhenRepeatUntilIsConfigured_ShouldReuseCursorAcrossIterations()
+    {
+        var executedCommands = new List<(string Command, object[] Arguments)>();
+        var results = new Queue<RedisResult>([
+            RedisResult.Create([
+                RedisResult.Create((RedisValue)"7"),
+                RedisResult.Create(new RedisValue[] { "key-1", "key-2" })
+            ]),
+            RedisResult.Create(2L),
+            RedisResult.Create([
+                RedisResult.Create((RedisValue)"0"),
+                RedisResult.Create(new RedisValue[] { "key-3" })
+            ]),
+            RedisResult.Create(1L)
+        ]);
+
+        var redisDbMock = new Mock<IDatabase>();
+        redisDbMock.Setup(m => m.Execute(It.IsAny<string>(), It.IsAny<object[]>()))
+            .Callback<string, object[]>((command, arguments) => executedCommands.Add((command, arguments)))
+            .Returns(() => results.Dequeue());
+
+        var probe = new ExecuteRedisCommands
+        {
+            Configuration = new RedisExecuteCommandsConfig
+            {
+                Commands =
+                [
+                    new RedisCommandConfig
+                    {
+                        Command = "SCAN",
+                        Arguments = ["${redisResults:scanResult:0??0}", "MATCH", "duplication:*", "COUNT", "1000"],
+                        StoreResultAs = "scanResult"
+                    },
+                    new RedisCommandConfig
+                    {
+                        Command = "DEL",
+                        Arguments = ["${redisResults:scanResult:1}"]
+                    }
+                ],
+                RepeatUntil = new RedisCommandLoopConfig
+                {
+                    ResultPath = "scanResult:0",
+                    ExpectedValue = "0",
+                    MaxIterations = 10
+                }
+            },
+            Context = CreateContext()
+        };
+
+        SetRedisDbField(probe, redisDbMock.Object);
+
+        InvokeRunRedisProbe(probe);
+
+        Assert.That(executedCommands.Select(entry => entry.Command),
+            Is.EqualTo(new[] { "SCAN", "DEL", "SCAN", "DEL" }));
+        Assert.That(executedCommands[0].Arguments.Select(FormatArgument),
+            Is.EqualTo(new[] { "0", "MATCH", "duplication:*", "COUNT", "1000" }));
+        Assert.That(executedCommands[1].Arguments.Select(FormatArgument),
+            Is.EqualTo(new[] { "key-1", "key-2" }));
+        Assert.That(executedCommands[2].Arguments.Select(FormatArgument),
+            Is.EqualTo(new[] { "7", "MATCH", "duplication:*", "COUNT", "1000" }));
+        Assert.That(executedCommands[3].Arguments.Select(FormatArgument),
+            Is.EqualTo(new[] { "key-3" }));
+    }
+
+    [Test]
+    public void ExecuteRedisCommands_WhenRepeatUntilSatisfiedOnMaxIteration_ShouldStopWithoutThrowing()
+    {
+        var executedCommands = new List<(string Command, object[] Arguments)>();
+        var redisDbMock = new Mock<IDatabase>();
+        redisDbMock.Setup(m => m.Execute(It.IsAny<string>(), It.IsAny<object[]>()))
+            .Callback<string, object[]>((command, arguments) => executedCommands.Add((command, arguments)))
+            .Returns(RedisResult.Create([
+                RedisResult.Create((RedisValue)"0"),
+                RedisResult.Create(new RedisValue[] { "key-1" })
+            ]));
+
+        var probe = new ExecuteRedisCommands
+        {
+            Configuration = new RedisExecuteCommandsConfig
+            {
+                Commands =
+                [
+                    new RedisCommandConfig
+                    {
+                        Command = "SCAN",
+                        Arguments = ["0", "MATCH", "duplication:*", "COUNT", "1000"],
+                        StoreResultAs = "scanResult"
+                    }
+                ],
+                RepeatUntil = new RedisCommandLoopConfig
+                {
+                    ResultPath = "scanResult:0",
+                    ExpectedValue = "0",
+                    MaxIterations = 1
+                }
+            },
+            Context = CreateContext()
+        };
+
+        SetRedisDbField(probe, redisDbMock.Object);
+
+        Assert.That(() => InvokeRunRedisProbe(probe), Throws.Nothing);
+        Assert.That(executedCommands.Select(entry => entry.Command), Is.EqualTo(new[] { "SCAN" }));
+    }
+
+    [Test]
+    public void ExecuteRedisCommands_WhenSkippedCommandStoredResultWouldBeReused_ShouldClearIt()
+    {
+        var executedCommands = new List<(string Command, object[] Arguments)>();
+        var results = new Queue<RedisResult>([
+            RedisResult.Create([
+                RedisResult.Create((RedisValue)"7"),
+                RedisResult.Create(new RedisValue[] { "key-1" })
+            ]),
+            RedisResult.Create(1L),
+            RedisResult.Create((RedisValue)"deleted"),
+            RedisResult.Create([
+                RedisResult.Create((RedisValue)"0"),
+                RedisResult.Create(Array.Empty<RedisValue>())
+            ]),
+            RedisResult.Create((RedisValue)"stale")
+        ]);
+
+        var redisDbMock = new Mock<IDatabase>();
+        redisDbMock.Setup(m => m.Execute(It.IsAny<string>(), It.IsAny<object[]>()))
+            .Callback<string, object[]>((command, arguments) => executedCommands.Add((command, arguments)))
+            .Returns(() => results.Dequeue());
+
+        var probe = new ExecuteRedisCommands
+        {
+            Configuration = new RedisExecuteCommandsConfig
+            {
+                Commands =
+                [
+                    new RedisCommandConfig
+                    {
+                        Command = "SCAN",
+                        Arguments = ["${redisResults:scanResult:0??0}", "MATCH", "duplication:*", "COUNT", "1000"],
+                        StoreResultAs = "scanResult"
+                    },
+                    new RedisCommandConfig
+                    {
+                        Command = "DEL",
+                        Arguments = ["${redisResults:scanResult:1}"],
+                        StoreResultAs = "deleteResult"
+                    },
+                    new RedisCommandConfig
+                    {
+                        Command = "ECHO",
+                        Arguments = ["${redisResults:deleteResult}"]
+                    }
+                ],
+                RepeatUntil = new RedisCommandLoopConfig
+                {
+                    ResultPath = "scanResult:0",
+                    ExpectedValue = "0",
+                    MaxIterations = 10
+                }
+            },
+            Context = CreateContext()
+        };
+
+        SetRedisDbField(probe, redisDbMock.Object);
+
+        InvokeRunRedisProbe(probe);
+
+        Assert.That(executedCommands.Select(entry => entry.Command),
+            Is.EqualTo(new[] { "SCAN", "DEL", "ECHO", "SCAN" }));
+        Assert.That(executedCommands[2].Arguments.Select(FormatArgument),
+            Is.EqualTo(new[] { "1" }));
+    }
+
+    [Test]
+    public void ExecuteRedisCommands_WhenRepeatUntilPathResolvesToCollection_ShouldThrowMeaningfulError()
+    {
+        var redisDbMock = new Mock<IDatabase>();
+        redisDbMock.Setup(m => m.Execute(It.IsAny<string>(), It.IsAny<object[]>()))
+            .Returns(RedisResult.Create([
+                RedisResult.Create((RedisValue)"0"),
+                RedisResult.Create(new RedisValue[] { "key-1", "key-2" })
+            ]));
+
+        var probe = new ExecuteRedisCommands
+        {
+            Configuration = new RedisExecuteCommandsConfig
+            {
+                Commands =
+                [
+                    new RedisCommandConfig
+                    {
+                        Command = "SCAN",
+                        Arguments = ["0", "MATCH", "duplication:*", "COUNT", "1000"],
+                        StoreResultAs = "scanResult"
+                    }
+                ],
+                RepeatUntil = new RedisCommandLoopConfig
+                {
+                    ResultPath = "scanResult",
+                    ExpectedValue = "0",
+                    MaxIterations = 2
+                }
+            },
+            Context = CreateContext()
+        };
+
+        SetRedisDbField(probe, redisDbMock.Object);
+
+        var exception = Assert.Throws<TargetInvocationException>(() => InvokeRunRedisProbe(probe));
+        Assert.That(exception!.InnerException, Is.TypeOf<InvalidOperationException>());
+        Assert.That(exception.InnerException!.Message,
+            Does.Contain("resolved to a collection and cannot be used as a scalar value"));
+    }
+
+    [Test]
+    public void ExecuteRedisCommand_WhenBinaryResultIsStored_ShouldReuseRawBytes()
+    {
+        var binaryPayload = new byte[] { 0, 1, 2, 255 };
+        var executedCommands = new List<(string Command, object[] Arguments)>();
+        var results = new Queue<RedisResult>([
+            RedisResult.Create((RedisValue)binaryPayload),
+            RedisResult.Create((RedisValue)"OK")
+        ]);
+        var redisDbMock = new Mock<IDatabase>();
+        redisDbMock.Setup(m => m.Execute(It.IsAny<string>(), It.IsAny<object[]>()))
+            .Callback<string, object[]>((command, arguments) => executedCommands.Add((command, arguments)))
+            .Returns(() => results.Dequeue());
+
+        var context = CreateContext();
+        var dumpProbe = new ExecuteRedisCommand
+        {
+            Configuration = new RedisExecuteCommandConfig
+            {
+                Command = "DUMP",
+                Arguments = ["source-key"],
+                StoreResultAs = "dumpResult"
+            },
+            Context = context
+        };
+
+        var restoreProbe = new ExecuteRedisCommand
+        {
+            Configuration = new RedisExecuteCommandConfig
+            {
+                Command = "RESTORE",
+                Arguments = ["target-key", "0", "${redisResults:dumpResult}"]
+            },
+            Context = context
+        };
+
+        SetRedisDbField(dumpProbe, redisDbMock.Object);
+        SetRedisDbField(restoreProbe, redisDbMock.Object);
+
+        InvokeRunRedisProbe(dumpProbe);
+        InvokeRunRedisProbe(restoreProbe);
+
+        Assert.That(executedCommands.Select(entry => entry.Command), Is.EqualTo(new[] { "DUMP", "RESTORE" }));
+        Assert.That(executedCommands[1].Arguments[2], Is.TypeOf<byte[]>());
+        Assert.That((byte[])executedCommands[1].Arguments[2], Is.EqualTo(binaryPayload));
     }
 
     private static void InvokeRunRedisProbe(object probe)
@@ -142,5 +504,23 @@ public class RedisExecuteProbesTests
         var baseType = probe.GetType().BaseType;
         var redisDbField = baseType?.GetField("RedisDb", BindingFlags.NonPublic | BindingFlags.Instance);
         redisDbField!.SetValue(probe, redisDb);
+    }
+
+    private static InternalContext CreateContext()
+    {
+        return new InternalContext
+        {
+            Logger = Globals.Logger,
+            InternalRunningSessions = new RunningSessions(new Dictionary<string, RunningSessionData<object, object>>())
+        };
+    }
+
+    private static string? FormatArgument(object? argument)
+    {
+        return argument switch
+        {
+            byte[] bytes => Encoding.UTF8.GetString(bytes),
+            _ => argument?.ToString()
+        };
     }
 }
