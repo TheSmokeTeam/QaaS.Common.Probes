@@ -50,4 +50,5 @@ public class EmptyRedisByChunks<TEmptyRedisByChunksProbeConfig> : BaseRedisProbe
 /// <summary>
 /// Concrete Redis chunk-deletion probe that uses the standard Redis batch probe configuration.
 /// </summary>
+/// <qaas-docs group="Redis maintenance" subgroup="Data cleanup" />
 public class EmptyRedisByChunks : EmptyRedisByChunks<RedisDataBaseBatchProbeConfig>;

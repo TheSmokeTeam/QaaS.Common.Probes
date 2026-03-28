@@ -7,8 +7,10 @@ namespace QaaS.Common.Probes.RedisProbes;
 /// Executes one Redis command with optional arguments against the selected Redis database,
 /// optionally storing the result for later redisResults placeholder reuse.
 /// </summary>
+/// <qaas-docs group="Redis maintenance" subgroup="Command execution" />
 public class ExecuteRedisCommand : BaseRedisProbe<RedisExecuteCommandConfig>
 {
+    /// <inheritdoc />
     protected override void RunRedisProbe()
     {
         var resolvedCommand = RedisCommandRuntimeResolver.ResolveCommand(Context, Configuration.Command!);

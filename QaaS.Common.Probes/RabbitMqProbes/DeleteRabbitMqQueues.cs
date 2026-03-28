@@ -7,6 +7,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// <summary>
 /// Probe that deletes rabbitmq queues
 /// </summary>
+/// <qaas-docs group="RabbitMQ administration" subgroup="Queues lifecycle" />
 public class DeleteRabbitMqQueues
     : BaseRabbitMqObjectsManipulation<DeleteRabbitMqQueuesConfig, string>
 {

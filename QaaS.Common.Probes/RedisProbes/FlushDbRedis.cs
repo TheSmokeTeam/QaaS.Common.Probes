@@ -6,6 +6,7 @@ namespace QaaS.Common.Probes.RedisProbes;
 /// <summary>
 /// Runs Redis FLUSHDB against the selected Redis database.
 /// </summary>
+/// <qaas-docs group="Redis maintenance" subgroup="Database flush" />
 public class FlushDbRedis : BaseRedisProbe<RedisDataBaseProbeBaseConfig>
 {
     private const string FlushDbCommand = "FLUSHDB";

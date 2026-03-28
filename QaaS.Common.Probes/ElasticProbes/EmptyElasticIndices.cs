@@ -8,6 +8,7 @@ namespace QaaS.Common.Probes.ElasticProbes;
 /// <summary>
 /// Empties elastic indices by their index pattern
 /// </summary>
+/// <qaas-docs group="Document stores" subgroup="Elastic indices" />
 public class EmptyElasticIndices : BaseElasticProbe<EmptyElasticIndicesConfig>
 {
     /// <summary>

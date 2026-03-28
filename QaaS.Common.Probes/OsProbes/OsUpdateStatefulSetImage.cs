@@ -8,6 +8,7 @@ namespace QaaS.Common.Probes.OsProbes;
 /// <summary>
 /// Updates the image of one container in a Kubernetes or OpenShift stateful set.
 /// </summary>
+/// <qaas-docs group="Cluster orchestration" subgroup="Image rollout" />
 public class OsUpdateStatefulSetImage
     : BaseOsUpdateStatefulSet<OsUpdateImageProbeConfig>
 {

@@ -6,6 +6,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// <summary>
 /// Uploads a definitions document to the RabbitMQ management API to recreate or synchronize broker topology.
 /// </summary>
+/// <qaas-docs group="RabbitMQ administration" subgroup="Definitions" />
 public class UploadRabbitMqDefinitions : BaseRabbitMqManagementProbe<UploadRabbitMqDefinitionsConfig>
 {
     protected override void RunRabbitMqManagementProbe(HttpClient httpClient)

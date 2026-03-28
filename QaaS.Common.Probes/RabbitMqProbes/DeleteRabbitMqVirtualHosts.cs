@@ -6,6 +6,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// <summary>
 /// Deletes RabbitMQ virtual hosts through the management API.
 /// </summary>
+/// <qaas-docs group="RabbitMQ administration" subgroup="Virtual hosts lifecycle" />
 public class DeleteRabbitMqVirtualHosts
     : BaseRabbitMqManagementObjectsManipulation<DeleteRabbitMqVirtualHostsConfig, string>
 {

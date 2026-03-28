@@ -7,8 +7,10 @@ namespace QaaS.Common.Probes.RedisProbes;
 /// Executes multiple Redis commands sequentially against the selected Redis database,
 /// allowing later commands to reuse earlier results through redisResults placeholders and optional looping.
 /// </summary>
+/// <qaas-docs group="Redis maintenance" subgroup="Command execution" />
 public class ExecuteRedisCommands : BaseRedisProbe<RedisExecuteCommandsConfig>
 {
+    /// <inheritdoc />
     protected override void RunRedisProbe()
     {
         var iteration = 0;
@@ -40,6 +42,11 @@ public class ExecuteRedisCommands : BaseRedisProbe<RedisExecuteCommandsConfig>
             Configuration.Commands!.Length, Configuration.RedisDataBase);
     }
 
+    /// <summary>
+    /// Evaluates the configured loop condition after one full command-sequence iteration.
+    /// </summary>
+    /// <param name="iteration">The 1-based iteration number that just completed.</param>
+    /// <returns><see langword="true"/> when another iteration is required; otherwise <see langword="false"/>.</returns>
     private bool ShouldRepeat(int iteration)
     {
         if (Configuration.RepeatUntil == null)

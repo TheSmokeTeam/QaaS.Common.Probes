@@ -6,6 +6,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// <summary>
 /// Deletes RabbitMQ user permissions in one or more virtual hosts through the management API.
 /// </summary>
+/// <qaas-docs group="RabbitMQ administration" subgroup="Permissions" />
 public class DeleteRabbitMqPermissions
     : BaseRabbitMqManagementObjectsManipulation<DeleteRabbitMqPermissionsConfig, RabbitMqPermissionTargetConfig>
 {

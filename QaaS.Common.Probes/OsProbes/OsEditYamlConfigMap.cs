@@ -13,6 +13,7 @@ namespace QaaS.Common.Probes.OsProbes;
 /// <summary>
 /// Probe that edits yaml config maps
 /// </summary>
+/// <qaas-docs group="Cluster orchestration" subgroup="Config maps" />
 public class OsEditYamlConfigMap : BaseOsProbe<OsEditYamlConfigMapConfig>
 {
     protected override void RunOsProbe()
