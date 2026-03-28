@@ -52,16 +52,19 @@ public class ExecuteRedisCommands : BaseRedisProbe<RedisExecuteCommandsConfig>
         if (Configuration.RepeatUntil == null)
             return false;
 
+        var currentValue = RedisCommandRuntimeResolver.ResolveStoredResultAsString(
+            Context,
+            Configuration.RepeatUntil.ResultPath!);
+
+        if (string.Equals(currentValue, Configuration.RepeatUntil.ExpectedValue, StringComparison.Ordinal))
+            return false;
+
         if (iteration >= Configuration.RepeatUntil.MaxIterations)
         {
             throw new InvalidOperationException(
                 $"Redis command loop exceeded the configured maximum of {Configuration.RepeatUntil.MaxIterations} iterations.");
         }
 
-        var currentValue = RedisCommandRuntimeResolver.ResolveStoredResultAsString(
-            Context,
-            Configuration.RepeatUntil.ResultPath!);
-
-        return !string.Equals(currentValue, Configuration.RepeatUntil.ExpectedValue, StringComparison.Ordinal);
+        return true;
     }
 }

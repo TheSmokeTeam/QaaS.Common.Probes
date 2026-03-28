@@ -298,6 +298,47 @@ public class RedisExecuteProbesTests
     }
 
     [Test]
+    public void ExecuteRedisCommands_WhenRepeatUntilSatisfiedOnMaxIteration_ShouldStopWithoutThrowing()
+    {
+        var executedCommands = new List<(string Command, object[] Arguments)>();
+        var redisDbMock = new Mock<IDatabase>();
+        redisDbMock.Setup(m => m.Execute(It.IsAny<string>(), It.IsAny<object[]>()))
+            .Callback<string, object[]>((command, arguments) => executedCommands.Add((command, arguments)))
+            .Returns(RedisResult.Create([
+                RedisResult.Create((RedisValue)"0"),
+                RedisResult.Create(new RedisValue[] { "key-1" })
+            ]));
+
+        var probe = new ExecuteRedisCommands
+        {
+            Configuration = new RedisExecuteCommandsConfig
+            {
+                Commands =
+                [
+                    new RedisCommandConfig
+                    {
+                        Command = "SCAN",
+                        Arguments = ["0", "MATCH", "duplication:*", "COUNT", "1000"],
+                        StoreResultAs = "scanResult"
+                    }
+                ],
+                RepeatUntil = new RedisCommandLoopConfig
+                {
+                    ResultPath = "scanResult:0",
+                    ExpectedValue = "0",
+                    MaxIterations = 1
+                }
+            },
+            Context = CreateContext()
+        };
+
+        SetRedisDbField(probe, redisDbMock.Object);
+
+        Assert.That(() => InvokeRunRedisProbe(probe), Throws.Nothing);
+        Assert.That(executedCommands.Select(entry => entry.Command), Is.EqualTo(new[] { "SCAN" }));
+    }
+
+    [Test]
     public void ExecuteRedisCommands_WhenSkippedCommandStoredResultWouldBeReused_ShouldClearIt()
     {
         var executedCommands = new List<(string Command, object[] Arguments)>();
