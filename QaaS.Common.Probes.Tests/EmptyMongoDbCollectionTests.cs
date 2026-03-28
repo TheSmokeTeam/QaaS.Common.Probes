@@ -16,6 +16,12 @@ public class EmptyMongoDbCollectionTests
         protected override IMongoCollection<BsonDocument> CreateCollection() => collection;
     }
 
+    private sealed class TestableDropMongoDbCollection(IMongoDatabase database)
+        : DropMongoDbCollection
+    {
+        protected override IMongoDatabase CreateDatabase() => database;
+    }
+
     [Test]
     public void Run_ShouldDeleteAllDocumentsFromConfiguredCollection()
     {
@@ -77,5 +83,26 @@ public class EmptyMongoDbCollectionTests
             It.IsAny<FilterDefinition<BsonDocument>>(),
             It.IsAny<DeleteOptions?>(),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public void Run_ForDropMongoDbCollection_ShouldDropTheConfiguredCollection()
+    {
+        var databaseMock = new Mock<IMongoDatabase>();
+
+        var probe = new TestableDropMongoDbCollection(databaseMock.Object)
+        {
+            Configuration = new DropMongoDbCollectionConfig
+            {
+                ConnectionString = "mongodb://localhost:27017",
+                DatabaseName = "db",
+                CollectionName = "col"
+            },
+            Context = Globals.Context
+        };
+
+        probe.Run([], []);
+
+        databaseMock.Verify(database => database.DropCollection("col", It.IsAny<CancellationToken>()), Times.Once);
     }
 }
