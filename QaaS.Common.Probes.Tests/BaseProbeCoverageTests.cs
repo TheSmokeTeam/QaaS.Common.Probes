@@ -137,7 +137,10 @@ public class BaseProbeCoverageTests
 
         var probe = new TestableRedisProbe(connectionMock.Object)
         {
-            Configuration = new RedisDataBaseBatchProbeConfig(),
+            Configuration = new RedisDataBaseBatchProbeConfig
+            {
+                RedisDataBase = 7
+            },
             Context = Globals.Context
         };
         SetRedisHostNames(probe.Configuration, "localhost");
@@ -147,6 +150,7 @@ public class BaseProbeCoverageTests
 
         Assert.That(probe.RunRedisProbeCalled, Is.True);
         Assert.That(probe.ObservedDatabase, Is.SameAs(databaseMock.Object));
+        connectionMock.Verify(connection => connection.GetDatabase(7, It.IsAny<object>()), Times.Once);
         connectionMock.Verify(connection => connection.Dispose(), Times.Once);
     }
 

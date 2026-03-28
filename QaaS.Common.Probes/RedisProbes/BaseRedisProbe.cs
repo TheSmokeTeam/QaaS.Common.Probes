@@ -1,6 +1,7 @@
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using QaaS.Common.Probes.ConfigurationObjects.Redis;
 using QaaS.Framework.Protocols.ConfigurationObjects.Redis;
 using QaaS.Framework.SDK.DataSourceObjects;
 using QaaS.Framework.SDK.Hooks.Probe;
@@ -25,7 +26,8 @@ public abstract class BaseRedisProbe<TBaseRedisProbeConfig> : BaseProbe<TBaseRed
         var configurationOptions = Configuration.CreateRedisConfigurationOptions();
         TextWriter consoleWriter = new IndentedTextWriter(Console.Out);
         _redisConnection = CreateConnectionMultiplexer(configurationOptions, consoleWriter);
-        RedisDb = _redisConnection.GetDatabase();
+        var redisDataBase = (Configuration as RedisDataBaseProbeBaseConfig)?.RedisDataBase ?? 0;
+        RedisDb = _redisConnection.GetDatabase(redisDataBase);
         RunRedisProbe();
     }
 

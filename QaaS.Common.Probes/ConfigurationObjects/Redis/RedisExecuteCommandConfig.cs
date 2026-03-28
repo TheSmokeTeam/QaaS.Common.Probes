@@ -10,4 +10,7 @@ public record RedisExecuteCommandConfig : RedisDataBaseProbeBaseConfig
 
     [Description("Optional redis command arguments")]
     public string[]? Arguments { get; set; }
+
+    [Description("Optional alias used to store the command result for later redisResults placeholders")]
+    public string? StoreResultAs { get; set; }
 }
