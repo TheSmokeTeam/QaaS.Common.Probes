@@ -7,4 +7,7 @@ public record RedisExecuteCommandsConfig : RedisDataBaseProbeBaseConfig
 {
     [Required, MinLength(1), Description("The redis commands to execute")]
     public RedisCommandConfig[]? Commands { get; set; }
+
+    [Description("Optional loop that repeats the command sequence until a stored redis result path matches the expected value")]
+    public RedisCommandLoopConfig? RepeatUntil { get; set; }
 }

@@ -46,6 +46,9 @@ internal static partial class RedisCommandRuntimeResolver
         context.InsertValueIntoGlobalDictionary([ResultsRootKey, alias.Trim()], ConvertRedisResult(result));
     }
 
+    public static string ResolveStoredResultAsString(Context context, string resultPath)
+        => ConvertScalarToString(ResolvePlaceholderValue(context, resultPath));
+
     private static string ReplaceScalarPlaceholders(Context context, string value)
     {
         return RedisResultsPlaceholderRegex().Replace(value, match =>
@@ -61,22 +64,32 @@ internal static partial class RedisCommandRuntimeResolver
         });
     }
 
-    private static object? ResolvePlaceholderValue(Context context, string placeholderPath)
+    private static object? ResolvePlaceholderValue(Context context, string placeholderExpression)
     {
-        var pathParts = placeholderPath
-            .Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var expressionParts = placeholderExpression.Split("??", 2, StringSplitOptions.TrimEntries);
+        var placeholderPath = expressionParts[0];
+        var defaultValue = expressionParts.Length == 2 ? expressionParts[1] : null;
+
+        var pathParts = placeholderPath.Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (pathParts.Length == 0)
         {
             throw new InvalidOperationException("redisResults placeholders must include a stored result alias.");
         }
 
-        object? current = context.GetValueFromGlobalDictionary([ResultsRootKey, pathParts[0]]);
-        foreach (var pathPart in pathParts.Skip(1))
+        try
         {
-            current = ResolvePathPart(current, pathPart);
-        }
+            object? current = context.GetValueFromGlobalDictionary([ResultsRootKey, pathParts[0]]);
+            foreach (var pathPart in pathParts.Skip(1))
+            {
+                current = ResolvePathPart(current, pathPart);
+            }
 
-        return current;
+            return current;
+        }
+        catch (KeyNotFoundException) when (defaultValue != null)
+        {
+            return defaultValue;
+        }
     }
 
     private static object? ResolvePathPart(object? value, string pathPart)
