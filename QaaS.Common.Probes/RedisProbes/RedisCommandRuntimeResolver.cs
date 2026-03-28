@@ -179,14 +179,14 @@ internal static partial class RedisCommandRuntimeResolver
 
         try
         {
-            return (string?)result;
+            return (byte[]?)result;
         }
         catch (InvalidCastException)
         {
-            // Fall back to raw bytes for binary values.
+            // Fall back to string conversion for textual values.
         }
 
-        return (byte[]?)result;
+        return (string?)result;
     }
 
     private static string ConvertScalarToString(object? value)

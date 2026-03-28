@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text;
 using Moq;
 using NUnit.Framework;
 using QaaS.Common.Probes.ConfigurationObjects.Redis;
@@ -179,7 +180,7 @@ public class RedisExecuteProbesTests
         InvokeRunRedisProbe(deleteProbe);
 
         Assert.That(executedCommands.Select(entry => entry.Command), Is.EqualTo(new[] { "SCAN", "DEL" }));
-        Assert.That(executedCommands[1].Arguments.Select(argument => argument.ToString()),
+        Assert.That(executedCommands[1].Arguments.Select(FormatArgument),
             Is.EqualTo(new[] { "key-1", "key-2" }));
     }
 
@@ -226,7 +227,7 @@ public class RedisExecuteProbesTests
         InvokeRunRedisProbe(probe);
 
         Assert.That(executedCommands.Select(entry => entry.Command), Is.EqualTo(new[] { "SCAN", "DEL" }));
-        Assert.That(executedCommands[1].Arguments.Select(argument => argument.ToString()),
+        Assert.That(executedCommands[1].Arguments.Select(FormatArgument),
             Is.EqualTo(new[] { "key-1", "key-2" }));
     }
 
@@ -286,13 +287,13 @@ public class RedisExecuteProbesTests
 
         Assert.That(executedCommands.Select(entry => entry.Command),
             Is.EqualTo(new[] { "SCAN", "DEL", "SCAN", "DEL" }));
-        Assert.That(executedCommands[0].Arguments.Select(argument => argument.ToString()),
+        Assert.That(executedCommands[0].Arguments.Select(FormatArgument),
             Is.EqualTo(new[] { "0", "MATCH", "duplication:*", "COUNT", "1000" }));
-        Assert.That(executedCommands[1].Arguments.Select(argument => argument.ToString()),
+        Assert.That(executedCommands[1].Arguments.Select(FormatArgument),
             Is.EqualTo(new[] { "key-1", "key-2" }));
-        Assert.That(executedCommands[2].Arguments.Select(argument => argument.ToString()),
+        Assert.That(executedCommands[2].Arguments.Select(FormatArgument),
             Is.EqualTo(new[] { "7", "MATCH", "duplication:*", "COUNT", "1000" }));
-        Assert.That(executedCommands[3].Arguments.Select(argument => argument.ToString()),
+        Assert.That(executedCommands[3].Arguments.Select(FormatArgument),
             Is.EqualTo(new[] { "key-3" }));
     }
 
@@ -315,6 +316,15 @@ public class RedisExecuteProbesTests
         {
             Logger = Globals.Logger,
             InternalRunningSessions = new RunningSessions(new Dictionary<string, RunningSessionData<object, object>>())
+        };
+    }
+
+    private static string? FormatArgument(object? argument)
+    {
+        return argument switch
+        {
+            byte[] bytes => Encoding.UTF8.GetString(bytes),
+            _ => argument?.ToString()
         };
     }
 }
