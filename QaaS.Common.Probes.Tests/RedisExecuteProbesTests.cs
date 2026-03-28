@@ -297,6 +297,73 @@ public class RedisExecuteProbesTests
             Is.EqualTo(new[] { "key-3" }));
     }
 
+    [Test]
+    public void ExecuteRedisCommands_WhenSkippedCommandStoredResultWouldBeReused_ShouldClearIt()
+    {
+        var executedCommands = new List<(string Command, object[] Arguments)>();
+        var results = new Queue<RedisResult>([
+            RedisResult.Create([
+                RedisResult.Create((RedisValue)"7"),
+                RedisResult.Create(new RedisValue[] { "key-1" })
+            ]),
+            RedisResult.Create(1L),
+            RedisResult.Create((RedisValue)"deleted"),
+            RedisResult.Create([
+                RedisResult.Create((RedisValue)"0"),
+                RedisResult.Create(Array.Empty<RedisValue>())
+            ]),
+            RedisResult.Create((RedisValue)"stale")
+        ]);
+
+        var redisDbMock = new Mock<IDatabase>();
+        redisDbMock.Setup(m => m.Execute(It.IsAny<string>(), It.IsAny<object[]>()))
+            .Callback<string, object[]>((command, arguments) => executedCommands.Add((command, arguments)))
+            .Returns(() => results.Dequeue());
+
+        var probe = new ExecuteRedisCommands
+        {
+            Configuration = new RedisExecuteCommandsConfig
+            {
+                Commands =
+                [
+                    new RedisCommandConfig
+                    {
+                        Command = "SCAN",
+                        Arguments = ["${redisResults:scanResult:0??0}", "MATCH", "duplication:*", "COUNT", "1000"],
+                        StoreResultAs = "scanResult"
+                    },
+                    new RedisCommandConfig
+                    {
+                        Command = "DEL",
+                        Arguments = ["${redisResults:scanResult:1}"],
+                        StoreResultAs = "deleteResult"
+                    },
+                    new RedisCommandConfig
+                    {
+                        Command = "ECHO",
+                        Arguments = ["${redisResults:deleteResult}"]
+                    }
+                ],
+                RepeatUntil = new RedisCommandLoopConfig
+                {
+                    ResultPath = "scanResult:0",
+                    ExpectedValue = "0",
+                    MaxIterations = 10
+                }
+            },
+            Context = CreateContext()
+        };
+
+        SetRedisDbField(probe, redisDbMock.Object);
+
+        InvokeRunRedisProbe(probe);
+
+        Assert.That(executedCommands.Select(entry => entry.Command),
+            Is.EqualTo(new[] { "SCAN", "DEL", "ECHO", "SCAN" }));
+        Assert.That(executedCommands[2].Arguments.Select(FormatArgument),
+            Is.EqualTo(new[] { "1" }));
+    }
+
     private static void InvokeRunRedisProbe(object probe)
     {
         var method = probe.GetType().GetMethod("RunRedisProbe", BindingFlags.NonPublic | BindingFlags.Instance)!;

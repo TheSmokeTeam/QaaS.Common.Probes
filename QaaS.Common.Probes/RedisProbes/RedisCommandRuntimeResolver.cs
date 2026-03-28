@@ -46,6 +46,14 @@ internal static partial class RedisCommandRuntimeResolver
         context.InsertValueIntoGlobalDictionary([ResultsRootKey, alias.Trim()], ConvertRedisResult(result));
     }
 
+    public static void StoreEmptyResult(Context context, string? alias)
+    {
+        if (string.IsNullOrWhiteSpace(alias))
+            return;
+
+        context.InsertValueIntoGlobalDictionary([ResultsRootKey, alias.Trim()], Array.Empty<object?>());
+    }
+
     public static string ResolveStoredResultAsString(Context context, string resultPath)
         => ConvertScalarToString(ResolvePlaceholderValue(context, resultPath));
 

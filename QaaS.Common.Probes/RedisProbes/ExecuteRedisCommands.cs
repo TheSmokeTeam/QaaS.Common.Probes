@@ -24,6 +24,7 @@ public class ExecuteRedisCommands : BaseRedisProbe<RedisExecuteCommandsConfig>
                     Context.Logger.LogDebug(
                         "Skipping redis command {RedisCommand} on database {RedisDatabase} because all arguments resolved to an empty collection",
                         resolvedCommand, Configuration.RedisDataBase);
+                    RedisCommandRuntimeResolver.StoreEmptyResult(Context, command.StoreResultAs);
                     continue;
                 }
 
