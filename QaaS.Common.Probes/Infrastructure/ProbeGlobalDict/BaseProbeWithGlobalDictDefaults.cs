@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Configuration;
 using QaaS.Common.Probes.ConfigurationObjects;
 using QaaS.Framework.Configurations;
+using QaaS.Framework.SDK.Hooks;
 using QaaS.Framework.SDK.Hooks.Probe;
 
 namespace QaaS.Common.Probes.Infrastructure.ProbeGlobalDict;
@@ -11,11 +12,11 @@ namespace QaaS.Common.Probes.Infrastructure.ProbeGlobalDict;
 /// The merge is deliberately based on raw configuration key presence rather than typed default values so explicit local
 /// settings such as <c>false</c>, <c>0</c>, or an empty collection continue to override global defaults.
 /// </summary>
-public abstract class BaseProbeWithGlobalDictDefaults<TConfiguration> : BaseProbe<TConfiguration>
+public abstract class BaseProbeWithGlobalDictDefaults<TConfiguration> : BaseProbe<TConfiguration>, IHook
     where TConfiguration : class, IUseGlobalDictProbeConfiguration, new()
 {
     /// <inheritdoc />
-    public override List<ValidationResult>? LoadAndValidateConfiguration(IConfiguration configuration)
+    public new List<ValidationResult>? LoadAndValidateConfiguration(IConfiguration configuration)
     {
         if (!configuration.GetValue<bool?>(nameof(IUseGlobalDictProbeConfiguration.UseGlobalDict)).GetValueOrDefault())
         {
@@ -37,6 +38,11 @@ public abstract class BaseProbeWithGlobalDictDefaults<TConfiguration> : BaseProb
         }
 
         return validationResults;
+    }
+
+    List<ValidationResult>? IHook.LoadAndValidateConfiguration(IConfiguration configuration)
+    {
+        return LoadAndValidateConfiguration(configuration);
     }
 
     /// <summary>
