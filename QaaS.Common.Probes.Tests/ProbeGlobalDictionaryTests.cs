@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Collections.Immutable;
 using k8s;
 using Microsoft.Extensions.Configuration;
@@ -50,7 +51,7 @@ public class ProbeGlobalDictionaryTests
             Context = context
         };
 
-        using (ProbeExecutionContext.Enter(context, "session-a", "delete-exchanges"))
+        using (EnterProbeExecutionScope("session-a", "delete-exchanges"))
         {
             Assert.That(writer.LoadAndValidateConfiguration(BuildConfiguration(new DeleteRabbitMqExchangesConfig
             {
@@ -67,7 +68,7 @@ public class ProbeGlobalDictionaryTests
 
         var reader = new CreateRabbitMqExchanges { Context = context };
         List<System.ComponentModel.DataAnnotations.ValidationResult>? validationResults;
-        using (ProbeExecutionContext.Enter(context, "session-a", "create-exchanges"))
+        using (EnterProbeExecutionScope("session-a", "create-exchanges"))
         {
             validationResults = reader.LoadAndValidateConfiguration(BuildConfiguration(new
             {
@@ -91,7 +92,7 @@ public class ProbeGlobalDictionaryTests
             Context = context
         };
 
-        using (ProbeExecutionContext.Enter(context, "session-a", "delete-exchanges"))
+        using (EnterProbeExecutionScope("session-a", "delete-exchanges"))
         {
             Assert.That(writer.LoadAndValidateConfiguration(BuildConfiguration(new DeleteRabbitMqExchangesConfig
             {
@@ -103,7 +104,7 @@ public class ProbeGlobalDictionaryTests
         }
 
         var reader = new CreateRabbitMqExchanges { Context = context };
-        using (ProbeExecutionContext.Enter(context, "session-a", "create-exchanges"))
+        using (EnterProbeExecutionScope("session-a", "create-exchanges"))
         {
             reader.LoadAndValidateConfiguration(BuildConfiguration(new CreateRabbitMqExchangesConfig
             {
@@ -133,7 +134,7 @@ public class ProbeGlobalDictionaryTests
             Context = context
         };
 
-        using (ProbeExecutionContext.Enter(context, "session-a", "delete-exchanges"))
+        using (EnterProbeExecutionScope("session-a", "delete-exchanges"))
         {
             Assert.That(writer.LoadAndValidateConfiguration(BuildConfiguration(new DeleteRabbitMqExchangesConfig
             {
@@ -146,7 +147,7 @@ public class ProbeGlobalDictionaryTests
 
         var reader = new CreateRabbitMqExchanges { Context = context };
         List<System.ComponentModel.DataAnnotations.ValidationResult>? validationResults;
-        using (ProbeExecutionContext.Enter(context, "session-a", "create-exchanges"))
+        using (EnterProbeExecutionScope("session-a", "create-exchanges"))
         {
             validationResults = reader.LoadAndValidateConfiguration(BuildConfiguration(new { }));
         }
@@ -231,13 +232,13 @@ public class ProbeGlobalDictionaryTests
         };
         writer.SetClient(server.CreateKubernetesClient());
 
-        using (ProbeExecutionContext.Enter(context, "session-a", "scale-down"))
+        using (EnterProbeExecutionScope("session-a", "scale-down"))
         {
             writer.InvokeRunOsProbe();
         }
 
         var reader = new OsScaleDeploymentPods { Context = context };
-        using (ProbeExecutionContext.Enter(context, "session-a", "scale-restore"))
+        using (EnterProbeExecutionScope("session-a", "scale-restore"))
         {
             reader.LoadAndValidateConfiguration(BuildConfiguration(new
             {
@@ -263,7 +264,7 @@ public class ProbeGlobalDictionaryTests
                 RedisDataBase = 4
             });
         var redisReader = new ExecuteRedisCommand { Context = context };
-        using (ProbeExecutionContext.Enter(context, "session-a", "redis-reader"))
+        using (EnterProbeExecutionScope("session-a", "redis-reader"))
         {
             Assert.That(redisReader.LoadAndValidateConfiguration(BuildConfiguration(new
             {
@@ -282,7 +283,7 @@ public class ProbeGlobalDictionaryTests
                 IndexPattern = "orders-*"
             });
         var elasticReader = new EmptyElasticIndices { Context = context };
-        using (ProbeExecutionContext.Enter(context, "session-a", "elastic-reader"))
+        using (EnterProbeExecutionScope("session-a", "elastic-reader"))
         {
             Assert.That(elasticReader.LoadAndValidateConfiguration(BuildConfiguration(new
             {
@@ -301,7 +302,7 @@ public class ProbeGlobalDictionaryTests
                 SecretKey = "secret"
             });
         var s3Reader = new EmptyS3Bucket { Context = context };
-        using (ProbeExecutionContext.Enter(context, "session-a", "s3-reader"))
+        using (EnterProbeExecutionScope("session-a", "s3-reader"))
         {
             Assert.That(s3Reader.LoadAndValidateConfiguration(BuildConfiguration(new
             {
@@ -319,7 +320,7 @@ public class ProbeGlobalDictionaryTests
                 CollectionName = "events"
             });
         var mongoReader = new EmptyMongoDbCollection { Context = context };
-        using (ProbeExecutionContext.Enter(context, "session-a", "mongo-reader"))
+        using (EnterProbeExecutionScope("session-a", "mongo-reader"))
         {
             Assert.That(mongoReader.LoadAndValidateConfiguration(BuildConfiguration(new
             {
@@ -335,7 +336,7 @@ public class ProbeGlobalDictionaryTests
                 TableNames = ["events"]
             });
         var sqlReader = new PostgreSqlDataBaseTablesTruncate { Context = context };
-        using (ProbeExecutionContext.Enter(context, "session-a", "sql-reader"))
+        using (EnterProbeExecutionScope("session-a", "sql-reader"))
         {
             Assert.That(sqlReader.LoadAndValidateConfiguration(BuildConfiguration(new
             {
@@ -389,8 +390,17 @@ public class ProbeGlobalDictionaryTests
         where TProbe : class, QaaS.Framework.SDK.Hooks.Probe.IProbe
         where TConfiguration : notnull
     {
-        using var scope = ProbeExecutionContext.Enter(context, sessionName, probeName);
+        using var scope = EnterProbeExecutionScope(sessionName, probeName);
         Assert.That(probe.LoadAndValidateConfiguration(BuildConfiguration(configuration)), Is.Empty);
+    }
+
+    private static IDisposable EnterProbeExecutionScope(string sessionName, string probeName)
+    {
+        var activity = new Activity("QaaS.ProbeExecutionScope");
+        activity.AddBaggage("qaas.probe.session-name", sessionName);
+        activity.AddBaggage("qaas.probe.probe-name", probeName);
+        activity.Start();
+        return new ActivityScope(activity);
     }
 
     private static IConfiguration BuildConfiguration(object configuration)
@@ -411,5 +421,13 @@ public class ProbeGlobalDictionaryTests
             Username = "user",
             Password = "password"
         };
+    }
+
+    private sealed class ActivityScope(Activity activity) : IDisposable
+    {
+        public void Dispose()
+        {
+            activity.Stop();
+        }
     }
 }

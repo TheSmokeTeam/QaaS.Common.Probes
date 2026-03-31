@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Configuration;
 using QaaS.Framework.Configurations;
@@ -23,6 +24,8 @@ internal static class ProbeGlobalDictionaryHelper
     private const string RootKey = "__ProbeGlobalDict";
     private const string ScopedKey = "Scoped";
     private const string AliasesKey = "Aliases";
+    private const string SessionNameBaggageKey = "qaas.probe.session-name";
+    private const string ProbeNameBaggageKey = "qaas.probe.probe-name";
     internal const string ConfigurationDefaultsPayloadKey = "__ConfigurationDefaults";
 
     /// <summary>
@@ -108,7 +111,7 @@ internal static class ProbeGlobalDictionaryHelper
 
     internal static IReadOnlyList<string> GetCanonicalPath(Context context)
     {
-        var descriptor = ProbeExecutionContext.GetCurrent(context);
+        var descriptor = GetCurrentProbeDescriptor();
         return
         [
             RootKey,
@@ -121,7 +124,7 @@ internal static class ProbeGlobalDictionaryHelper
 
     internal static IReadOnlyList<string> GetAliasPath(Context context, params string[] aliasSegments)
     {
-        var descriptor = ProbeExecutionContext.GetCurrent(context);
+        var descriptor = GetCurrentProbeDescriptor();
         var path = new List<string>(4 + aliasSegments.Length)
         {
             RootKey,
@@ -171,6 +174,21 @@ internal static class ProbeGlobalDictionaryHelper
         }
 
         return $"context::{RuntimeHelpers.GetHashCode(context):X8}";
+    }
+
+    private static (string SessionName, string ProbeName) GetCurrentProbeDescriptor()
+    {
+        var currentActivity = Activity.Current;
+        var sessionName = currentActivity?.GetBaggageItem(SessionNameBaggageKey);
+        var probeName = currentActivity?.GetBaggageItem(ProbeNameBaggageKey);
+        if (!string.IsNullOrWhiteSpace(sessionName) && !string.IsNullOrWhiteSpace(probeName))
+        {
+            return (sessionName, probeName);
+        }
+
+        throw new InvalidOperationException(
+            "Probe execution scope is not available. Runner should wrap probe configuration loading and execution " +
+            "inside a probe execution Activity so probe global-dictionary paths remain unique per session and probe.");
     }
 
     private sealed record ProbeGlobalDictAlias(IReadOnlyList<string> CanonicalPath);
