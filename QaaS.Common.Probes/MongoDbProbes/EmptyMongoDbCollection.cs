@@ -13,7 +13,7 @@ namespace QaaS.Common.Probes.MongoDbProbes;
 /// Deletes all documents from the configured MongoDB collection so it starts clean for the test run.
 /// </summary>
 /// <qaas-docs group="Databases" subgroup="MongoDB" />
-public class EmptyMongoDbCollection : BaseProbe<EmptyMongoDbCollectionConfig>
+public class EmptyMongoDbCollection : BaseMongoDbProbeWithGlobalDictDefaults<EmptyMongoDbCollectionConfig>
 {
     public override void Run(IImmutableList<SessionData> sessionDataList, IImmutableList<DataSource> dataSourceList)
     {

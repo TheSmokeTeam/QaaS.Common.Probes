@@ -7,7 +7,7 @@ namespace QaaS.Common.Probes.SqlProbes;
 /// Truncates the configured Microsoft SQL Server tables in the order they are listed.
 /// </summary>
 /// <qaas-docs group="SQL maintenance" subgroup="Microsoft SQL tables" />
-public class MsSqlDataBaseTablesTruncate : BaseSqlDataBaseTablesTruncateProbe
+public class MsSqlDataBaseTablesTruncate : BaseSqlDataBaseTablesTruncateProbeWithGlobalDictDefaults
 {
     protected override IDbConnection CreateDbConnection()
         => new SqlConnection(Configuration.ConnectionString);

@@ -8,7 +8,7 @@ namespace QaaS.Common.Probes.RedisProbes;
 /// allowing later commands to reuse earlier results through redisResults placeholders and optional looping.
 /// </summary>
 /// <qaas-docs group="Redis maintenance" subgroup="Command execution" />
-public class ExecuteRedisCommands : BaseRedisProbe<RedisExecuteCommandsConfig>
+public class ExecuteRedisCommands : BaseRedisProbeWithGlobalDictDefaults<RedisExecuteCommandsConfig>
 {
     /// <inheritdoc />
     protected override void RunRedisProbe()

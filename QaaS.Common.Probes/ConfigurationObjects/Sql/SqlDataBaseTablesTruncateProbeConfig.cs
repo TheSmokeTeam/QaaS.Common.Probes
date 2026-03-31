@@ -1,10 +1,15 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using QaaS.Common.Probes.ConfigurationObjects;
 
 namespace QaaS.Common.Probes.ConfigurationObjects.Sql;
 
-public record SqlDataBaseTablesTruncateProbeConfig
+public record SqlDataBaseTablesTruncateProbeConfig : IUseGlobalDictProbeConfiguration
 {
+    [Description("When true, missing SQL probe configuration keys can be resolved from the shared global dictionary before local values are applied."),
+     DefaultValue(false)]
+    public bool UseGlobalDict { get; set; }
+
     [Required, Description("The connection string to the database")]
     public string? ConnectionString { get; set; }
 

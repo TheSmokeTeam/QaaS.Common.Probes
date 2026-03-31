@@ -1,5 +1,8 @@
-﻿using Microsoft.Extensions.Logging;
+using System.Collections.Immutable;
+using Microsoft.Extensions.Logging;
 using QaaS.Common.Probes.ConfigurationObjects.RabbitMq;
+using QaaS.Framework.SDK.DataSourceObjects;
+using QaaS.Framework.SDK.Session.SessionDataObjects;
 using RabbitMQ.Client;
 
 namespace QaaS.Common.Probes.RabbitMqProbes;
@@ -9,11 +12,21 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Bindings lifecycle" />
 public class DeleteRabbitMqBindings
-    : BaseRabbitMqObjectsManipulation<RabbitMqBindingsConfig, RabbitMqBindingConfig>
+    : BaseRabbitMqObjectsManipulationWithGlobalDictDefaults<RabbitMqBindingsConfig, RabbitMqBindingConfig>
 {
     protected override IEnumerable<RabbitMqBindingConfig> GetObjectsToManipulateConfigurations()
         => Configuration.Bindings!;
 
+    public override void Run(IImmutableList<SessionData> sessionDataList, IImmutableList<DataSource> dataSourceList)
+    {
+        base.Run(sessionDataList, dataSourceList);
+        if (Configuration.UseGlobalDict)
+        {
+            SaveGlobalDictionaryPayload("recovery",
+                new { Bindings = Configuration.Bindings! },
+                BuildGlobalDictionaryAliasPath("RabbitMq", "Recovery", "Bindings"));
+        }
+    }
 
     protected override void ManipulateObject(IChannel channel, RabbitMqBindingConfig objectToManipulateConfig)
     {

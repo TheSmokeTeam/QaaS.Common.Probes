@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using QaaS.Common.Probes.ConfigurationObjects.RabbitMq;
+using QaaS.Common.Probes.Infrastructure.ProbeGlobalDict;
 using RabbitMQ.Client;
 
 namespace QaaS.Common.Probes.RabbitMqProbes;
@@ -9,11 +11,17 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Bindings lifecycle" />
 public class CreateRabbitMqBindings
-    : BaseRabbitMqObjectsManipulation<RabbitMqBindingsConfig, RabbitMqBindingConfig>
+    : BaseRabbitMqObjectsManipulationWithGlobalDictDefaults<RabbitMqBindingsConfig, RabbitMqBindingConfig>
 {
+    protected override IEnumerable<ProbeGlobalDictReadRequest> GetAdditionalGlobalDictionaryReadRequests(
+        IConfiguration localConfiguration)
+    {
+        yield return new ProbeGlobalDictReadRequest("recovery",
+            BuildGlobalDictionaryAliasPath("RabbitMq", "Recovery", "Bindings"));
+    }
+
     protected override IEnumerable<RabbitMqBindingConfig> GetObjectsToManipulateConfigurations() =>
         Configuration.Bindings!;
-
 
     protected override void ManipulateObject(IChannel channel, RabbitMqBindingConfig objectToManipulateConfig)
     {

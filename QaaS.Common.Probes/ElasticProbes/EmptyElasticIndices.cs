@@ -9,7 +9,7 @@ namespace QaaS.Common.Probes.ElasticProbes;
 /// Empties elastic indices by their index pattern
 /// </summary>
 /// <qaas-docs group="Databases" subgroup="Elasticsearch" />
-public class EmptyElasticIndices : BaseElasticProbe<EmptyElasticIndicesConfig>
+public class EmptyElasticIndices : BaseElasticProbeWithGlobalDictDefaults<EmptyElasticIndicesConfig>
 {
     /// <summary>
     /// Returns all the indexes relevant to the configured index pattern
