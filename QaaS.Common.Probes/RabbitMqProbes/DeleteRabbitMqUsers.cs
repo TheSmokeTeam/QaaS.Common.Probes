@@ -11,7 +11,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Users lifecycle" />
 public class DeleteRabbitMqUsers
-    : BaseRabbitMqManagementObjectsManipulationWithGlobalDictDefaults<DeleteRabbitMqUsersConfig, string>
+    : BaseRabbitMqManagementObjectsManipulationWithGlobalDict<DeleteRabbitMqUsersConfig, string>
 {
     protected override IEnumerable<string> GetObjectsToManipulateConfigurations() => Configuration.Usernames!;
 

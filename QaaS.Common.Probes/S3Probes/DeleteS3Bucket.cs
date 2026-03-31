@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using QaaS.Common.Probes.ConfigurationObjects.S3;
 
 namespace QaaS.Common.Probes.S3Probes;
@@ -7,7 +7,7 @@ namespace QaaS.Common.Probes.S3Probes;
 /// Probe to delete a s3 bucket
 /// </summary>
 /// <qaas-docs group="Databases" subgroup="S3" />
-public class DeleteS3Bucket : BaseS3ProbeWithGlobalDictDefaults<DeleteS3BucketConfig>
+public class DeleteS3Bucket : BaseS3ProbeWithGlobalDict<DeleteS3BucketConfig>
 {
     protected override void RunS3Probe()
     {

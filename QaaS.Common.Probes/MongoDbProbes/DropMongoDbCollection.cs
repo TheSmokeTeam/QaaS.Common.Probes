@@ -12,7 +12,7 @@ namespace QaaS.Common.Probes.MongoDbProbes;
 /// Drops the configured MongoDB collection so a later run can recreate it from scratch.
 /// </summary>
 /// <qaas-docs group="Databases" subgroup="MongoDB" />
-public class DropMongoDbCollection : BaseMongoDbProbeWithGlobalDictDefaults<DropMongoDbCollectionConfig>
+public class DropMongoDbCollection : BaseMongoDbProbeWithGlobalDict<DropMongoDbCollectionConfig>
 {
     public override void Run(IImmutableList<SessionData> sessionDataList, IImmutableList<DataSource> dataSourceList)
     {

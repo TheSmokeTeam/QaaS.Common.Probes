@@ -12,7 +12,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Exchanges lifecycle" />
 public class DeleteRabbitMqExchanges
-    : BaseRabbitMqObjectsManipulationWithGlobalDictDefaults<DeleteRabbitMqExchangesConfig, string>
+    : BaseRabbitMqObjectsManipulationWithGlobalDict<DeleteRabbitMqExchangesConfig, string>
 {
     protected override IEnumerable<string> GetObjectsToManipulateConfigurations()
         => Configuration.ExchangeNames!;

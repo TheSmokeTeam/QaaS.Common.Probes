@@ -8,8 +8,8 @@ namespace QaaS.Common.Probes.OsProbes;
 /// <summary>
 /// Stateful-set-specific specialization of the OpenShift mutation base with stateful rollout availability checks.
 /// </summary>
-public abstract class BaseOsUpdateStatefulSetWithGlobalDictDefaults<TOsUpdatePodsProbeConfig>
-    : BaseOsUpdatePodsProbeWithGlobalDictDefaults<TOsUpdatePodsProbeConfig, V1StatefulSet>
+public abstract class BaseOsUpdateStatefulSetWithGlobalDict<TOsUpdatePodsProbeConfig>
+    : BaseOsUpdatePodsProbeWithGlobalDict<TOsUpdatePodsProbeConfig, V1StatefulSet>
     where TOsUpdatePodsProbeConfig : OsUpdatePodsProbeConfig, new()
 {
     protected override bool IsReplicaSetAvailable(V1StatefulSet replicaSet)

@@ -11,7 +11,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Permissions" />
 public class DeleteRabbitMqPermissions
-    : BaseRabbitMqManagementObjectsManipulationWithGlobalDictDefaults<DeleteRabbitMqPermissionsConfig, RabbitMqPermissionTargetConfig>
+    : BaseRabbitMqManagementObjectsManipulationWithGlobalDict<DeleteRabbitMqPermissionsConfig, RabbitMqPermissionTargetConfig>
 {
     protected override IEnumerable<RabbitMqPermissionTargetConfig> GetObjectsToManipulateConfigurations()
         => Configuration.Permissions!;

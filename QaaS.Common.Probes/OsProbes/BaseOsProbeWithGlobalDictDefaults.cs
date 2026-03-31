@@ -13,8 +13,8 @@ namespace QaaS.Common.Probes.OsProbes;
 /// Shared OpenShift probe base that resolves missing cluster settings from the probe global dictionary before creating
 /// the Kubernetes client.
 /// </summary>
-public abstract class BaseOsProbeWithGlobalDictDefaults<TOsProbeConfig>
-    : BaseProbeWithGlobalDictDefaults<TOsProbeConfig>, IDisposable
+public abstract class BaseOsProbeWithGlobalDict<TOsProbeConfig>
+    : BaseProbeWithGlobalDict<TOsProbeConfig>, IDisposable
     where TOsProbeConfig : OsProbeConfig, new()
 {
     protected Kubernetes? Kubernetes;

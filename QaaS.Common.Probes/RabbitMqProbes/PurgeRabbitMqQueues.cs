@@ -9,7 +9,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Queues lifecycle" />
 public class PurgeRabbitMqQueues
-    : BaseRabbitMqObjectsManipulationWithGlobalDictDefaults<PurgeRabbitMqQueuesConfig, string>
+    : BaseRabbitMqObjectsManipulationWithGlobalDict<PurgeRabbitMqQueuesConfig, string>
 {
     protected override IEnumerable<string> GetObjectsToManipulateConfigurations()
         => Configuration.QueueNames!;

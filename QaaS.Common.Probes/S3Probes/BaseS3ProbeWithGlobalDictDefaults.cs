@@ -13,8 +13,8 @@ namespace QaaS.Common.Probes.S3Probes;
 /// Shared S3 probe base that resolves missing endpoint and bucket settings from the probe global dictionary before
 /// constructing the S3 clients.
 /// </summary>
-public abstract class BaseS3ProbeWithGlobalDictDefaults<TBaseS3ProbeConfig>
-    : BaseProbeWithGlobalDictDefaults<TBaseS3ProbeConfig>
+public abstract class BaseS3ProbeWithGlobalDict<TBaseS3ProbeConfig>
+    : BaseProbeWithGlobalDict<TBaseS3ProbeConfig>
     where TBaseS3ProbeConfig : S3BucketConfig, IUseGlobalDictProbeConfiguration, new()
 {
     protected IAmazonS3 S3Client = null!;

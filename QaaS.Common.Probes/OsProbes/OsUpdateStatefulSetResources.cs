@@ -12,7 +12,7 @@ namespace QaaS.Common.Probes.OsProbes;
 /// </summary>
 /// <qaas-docs group="Cluster orchestration" subgroup="Resource tuning" />
 public class OsUpdateStatefulSetResources
-    : BaseOsUpdateStatefulSetWithGlobalDictDefaults<OsUpdateResourcesProbeConfig>
+    : BaseOsUpdateStatefulSetWithGlobalDict<OsUpdateResourcesProbeConfig>
 {
     protected override IEnumerable<ProbeGlobalDictReadRequest> GetAdditionalGlobalDictionaryReadRequests(
         IConfiguration localConfiguration)

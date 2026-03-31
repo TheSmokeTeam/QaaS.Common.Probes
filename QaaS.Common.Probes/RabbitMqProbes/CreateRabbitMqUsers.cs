@@ -12,7 +12,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Users lifecycle" />
 public class CreateRabbitMqUsers
-    : BaseRabbitMqManagementObjectsManipulationWithGlobalDictDefaults<CreateRabbitMqUsersConfig, RabbitMqUserConfig>
+    : BaseRabbitMqManagementObjectsManipulationWithGlobalDict<CreateRabbitMqUsersConfig, RabbitMqUserConfig>
 {
     private static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {

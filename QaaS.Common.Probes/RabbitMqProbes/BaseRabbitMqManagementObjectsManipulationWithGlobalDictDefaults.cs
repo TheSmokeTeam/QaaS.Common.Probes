@@ -5,8 +5,8 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// <summary>
 /// Shared management-API object-manipulation base for RabbitMQ probes that iterate over a configured object set.
 /// </summary>
-public abstract class BaseRabbitMqManagementObjectsManipulationWithGlobalDictDefaults<TRabbitMqManagementConfig,
-    TObjectToManipulateConfig> : BaseRabbitMqManagementProbeWithGlobalDictDefaults<TRabbitMqManagementConfig>
+public abstract class BaseRabbitMqManagementObjectsManipulationWithGlobalDict<TRabbitMqManagementConfig,
+    TObjectToManipulateConfig> : BaseRabbitMqManagementProbeWithGlobalDict<TRabbitMqManagementConfig>
     where TRabbitMqManagementConfig : BaseRabbitMqManagementConfig, new()
 {
     protected override void RunRabbitMqManagementProbe(HttpClient httpClient)

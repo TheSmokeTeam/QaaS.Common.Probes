@@ -7,7 +7,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// Downloads RabbitMQ definitions from the management API so the current topology can be captured and reused.
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Definitions" />
-public class DownloadRabbitMqDefinitions : BaseRabbitMqManagementProbeWithGlobalDictDefaults<DownloadRabbitMqDefinitionsConfig>
+public class DownloadRabbitMqDefinitions : BaseRabbitMqManagementProbeWithGlobalDict<DownloadRabbitMqDefinitionsConfig>
 {
     protected override void RunRabbitMqManagementProbe(HttpClient httpClient)
     {

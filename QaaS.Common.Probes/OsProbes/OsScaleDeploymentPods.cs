@@ -10,7 +10,7 @@ namespace QaaS.Common.Probes.OsProbes;
 /// Probe that scales openshift deployments
 /// </summary>
 /// <qaas-docs group="Cluster orchestration" subgroup="Scaling" />
-public class OsScaleDeploymentPods : BaseOsUpdateDeploymentWithGlobalDictDefaults<OsScalePodsProbeConfig>
+public class OsScaleDeploymentPods : BaseOsUpdateDeploymentWithGlobalDict<OsScalePodsProbeConfig>
 {
     protected override IEnumerable<ProbeGlobalDictReadRequest> GetAdditionalGlobalDictionaryReadRequests(
         IConfiguration localConfiguration)

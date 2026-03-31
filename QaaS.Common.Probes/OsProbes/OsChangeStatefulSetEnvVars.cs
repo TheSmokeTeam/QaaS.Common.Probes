@@ -12,7 +12,7 @@ namespace QaaS.Common.Probes.OsProbes;
 /// </summary>
 /// <qaas-docs group="Cluster orchestration" subgroup="Environment variables" />
 public class OsChangeStatefulSetEnvVars :
-    BaseOsUpdateStatefulSetWithGlobalDictDefaults<OsChangeEnvVarsConfig>
+    BaseOsUpdateStatefulSetWithGlobalDict<OsChangeEnvVarsConfig>
 {
     protected override IEnumerable<ProbeGlobalDictReadRequest> GetAdditionalGlobalDictionaryReadRequests(
         IConfiguration localConfiguration)

@@ -15,8 +15,8 @@ namespace QaaS.Common.Probes.RedisProbes;
 /// Shared Redis probe base that resolves missing connection and database settings from the probe global dictionary
 /// before connecting.
 /// </summary>
-public abstract class BaseRedisProbeWithGlobalDictDefaults<TBaseRedisProbeConfig>
-    : BaseProbeWithGlobalDictDefaults<TBaseRedisProbeConfig>, IDisposable
+public abstract class BaseRedisProbeWithGlobalDict<TBaseRedisProbeConfig>
+    : BaseProbeWithGlobalDict<TBaseRedisProbeConfig>, IDisposable
     where TBaseRedisProbeConfig : BaseRedisConfig, IUseGlobalDictProbeConfiguration, new()
 {
     private IConnectionMultiplexer _redisConnection = null!;

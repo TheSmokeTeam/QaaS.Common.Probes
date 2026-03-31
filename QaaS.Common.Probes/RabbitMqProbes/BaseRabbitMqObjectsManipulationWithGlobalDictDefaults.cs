@@ -12,8 +12,8 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// Shared AMQP-based RabbitMQ probe base that can consume session-scoped defaults and recovery payloads from the
 /// probe global dictionary before manipulating broker objects.
 /// </summary>
-public abstract class BaseRabbitMqObjectsManipulationWithGlobalDictDefaults<TRabbitMqObjectsManipulationConfig,
-    TObjectToManipulateConfig> : BaseProbeWithGlobalDictDefaults<TRabbitMqObjectsManipulationConfig>
+public abstract class BaseRabbitMqObjectsManipulationWithGlobalDict<TRabbitMqObjectsManipulationConfig,
+    TObjectToManipulateConfig> : BaseProbeWithGlobalDict<TRabbitMqObjectsManipulationConfig>
     where TRabbitMqObjectsManipulationConfig : BaseRabbitMqConfig, new()
 {
     private IConnectionFactory _connectionFactory = null!;

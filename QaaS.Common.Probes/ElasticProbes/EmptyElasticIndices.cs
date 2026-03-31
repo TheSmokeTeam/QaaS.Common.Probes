@@ -1,4 +1,4 @@
-﻿using Elasticsearch.Net;
+using Elasticsearch.Net;
 using Microsoft.Extensions.Logging;
 using Nest;
 using QaaS.Common.Probes.ConfigurationObjects.Elastic;
@@ -9,7 +9,7 @@ namespace QaaS.Common.Probes.ElasticProbes;
 /// Empties elastic indices by their index pattern
 /// </summary>
 /// <qaas-docs group="Databases" subgroup="Elasticsearch" />
-public class EmptyElasticIndices : BaseElasticProbeWithGlobalDictDefaults<EmptyElasticIndicesConfig>
+public class EmptyElasticIndices : BaseElasticProbeWithGlobalDict<EmptyElasticIndicesConfig>
 {
     /// <summary>
     /// Returns all the indexes relevant to the configured index pattern

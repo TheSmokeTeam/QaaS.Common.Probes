@@ -12,7 +12,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Queues lifecycle" />
 public class DeleteRabbitMqQueues
-    : BaseRabbitMqObjectsManipulationWithGlobalDictDefaults<DeleteRabbitMqQueuesConfig, string>
+    : BaseRabbitMqObjectsManipulationWithGlobalDict<DeleteRabbitMqQueuesConfig, string>
 {
     protected override IEnumerable<string> GetObjectsToManipulateConfigurations() => Configuration.QueueNames!;
 

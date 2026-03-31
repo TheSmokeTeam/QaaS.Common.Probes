@@ -13,8 +13,8 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// Shared RabbitMQ management-API probe base that supports session-scoped default fallback through the probe global
 /// dictionary.
 /// </summary>
-public abstract class BaseRabbitMqManagementProbeWithGlobalDictDefaults<TRabbitMqManagementConfig>
-    : BaseProbeWithGlobalDictDefaults<TRabbitMqManagementConfig>
+public abstract class BaseRabbitMqManagementProbeWithGlobalDict<TRabbitMqManagementConfig>
+    : BaseProbeWithGlobalDict<TRabbitMqManagementConfig>
     where TRabbitMqManagementConfig : BaseRabbitMqManagementConfig, new()
 {
     protected string ManagementApiBaseUrl = string.Empty;

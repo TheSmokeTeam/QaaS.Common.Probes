@@ -9,8 +9,8 @@ namespace QaaS.Common.Probes.OsProbes;
 /// Derived probes update one replica-set-like resource, wait for convergence, and then publish a sparse recovery patch
 /// that a later rollback probe can consume when local configuration omits the restore values.
 /// </summary>
-public abstract class BaseOsUpdatePodsProbeWithGlobalDictDefaults<TOsUpdatePodsProbeConfig, TReplicaSet>
-    : BaseOsProbeWithGlobalDictDefaults<TOsUpdatePodsProbeConfig>
+public abstract class BaseOsUpdatePodsProbeWithGlobalDict<TOsUpdatePodsProbeConfig, TReplicaSet>
+    : BaseOsProbeWithGlobalDict<TOsUpdatePodsProbeConfig>
     where TOsUpdatePodsProbeConfig : OsUpdatePodsProbeConfig, new()
 {
     protected override void RunOsProbe()

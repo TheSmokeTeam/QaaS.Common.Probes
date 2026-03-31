@@ -11,7 +11,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Virtual hosts lifecycle" />
 public class DeleteRabbitMqVirtualHosts
-    : BaseRabbitMqManagementObjectsManipulationWithGlobalDictDefaults<DeleteRabbitMqVirtualHostsConfig, string>
+    : BaseRabbitMqManagementObjectsManipulationWithGlobalDict<DeleteRabbitMqVirtualHostsConfig, string>
 {
     protected override IEnumerable<string> GetObjectsToManipulateConfigurations() => Configuration.VirtualHostNames!;
 

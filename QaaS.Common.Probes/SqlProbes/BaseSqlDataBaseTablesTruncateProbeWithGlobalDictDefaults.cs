@@ -12,8 +12,8 @@ namespace QaaS.Common.Probes.SqlProbes;
 /// Shared SQL truncate probe base that resolves missing connection settings from the probe global dictionary and then
 /// truncates the configured tables.
 /// </summary>
-public abstract class BaseSqlDataBaseTablesTruncateProbeWithGlobalDictDefaults
-    : BaseProbeWithGlobalDictDefaults<SqlDataBaseTablesTruncateProbeConfig>
+public abstract class BaseSqlDataBaseTablesTruncateProbeWithGlobalDict
+    : BaseProbeWithGlobalDict<SqlDataBaseTablesTruncateProbeConfig>
 {
     private IDbConnection _dbConnection = null!;
 

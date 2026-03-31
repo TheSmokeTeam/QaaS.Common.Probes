@@ -7,7 +7,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// Uploads a previously captured RabbitMQ definitions file back into the broker through the management API.
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Definitions" />
-public class UploadRabbitMqDefinitions : BaseRabbitMqManagementProbeWithGlobalDictDefaults<UploadRabbitMqDefinitionsConfig>
+public class UploadRabbitMqDefinitions : BaseRabbitMqManagementProbeWithGlobalDict<UploadRabbitMqDefinitionsConfig>
 {
     protected override void RunRabbitMqManagementProbe(HttpClient httpClient)
     {

@@ -9,8 +9,8 @@ namespace QaaS.Common.Probes.MongoDbProbes;
 /// <summary>
 /// Shared MongoDB probe base that resolves collection-target defaults from the probe global dictionary.
 /// </summary>
-public abstract class BaseMongoDbProbeWithGlobalDictDefaults<TMongoDbConfig>
-    : BaseProbeWithGlobalDictDefaults<TMongoDbConfig>
+public abstract class BaseMongoDbProbeWithGlobalDict<TMongoDbConfig>
+    : BaseProbeWithGlobalDict<TMongoDbConfig>
     where TMongoDbConfig : QaaS.Framework.Configurations.CommonConfigurationObjects.MongoCollectionConfig,
         ConfigurationObjects.IUseGlobalDictProbeConfiguration, new()
 {

@@ -11,7 +11,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Exchanges lifecycle" />
 public class CreateRabbitMqExchanges
-    : BaseRabbitMqObjectsManipulationWithGlobalDictDefaults<CreateRabbitMqExchangesConfig, RabbitMqExchangeConfig>
+    : BaseRabbitMqObjectsManipulationWithGlobalDict<CreateRabbitMqExchangesConfig, RabbitMqExchangeConfig>
 {
     protected override IEnumerable<ProbeGlobalDictReadRequest> GetAdditionalGlobalDictionaryReadRequests(
         IConfiguration localConfiguration)

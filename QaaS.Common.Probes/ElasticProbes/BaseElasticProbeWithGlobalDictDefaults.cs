@@ -12,8 +12,8 @@ namespace QaaS.Common.Probes.ElasticProbes;
 /// Shared Elasticsearch probe base that can resolve missing cluster settings from the probe global dictionary before
 /// opening the client connection.
 /// </summary>
-public abstract class BaseElasticProbeWithGlobalDictDefaults<TElasticProbeConfig>
-    : BaseProbeWithGlobalDictDefaults<TElasticProbeConfig>
+public abstract class BaseElasticProbeWithGlobalDict<TElasticProbeConfig>
+    : BaseProbeWithGlobalDict<TElasticProbeConfig>
     where TElasticProbeConfig : BaseElasticConfig, IUseGlobalDictProbeConfiguration, new()
 {
     protected IElasticClient ElasticClient = null!;

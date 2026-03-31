@@ -8,8 +8,8 @@ namespace QaaS.Common.Probes.OsProbes;
 /// <summary>
 /// Deployment-specific specialization of the OpenShift mutation base with deployment availability semantics.
 /// </summary>
-public abstract class BaseOsUpdateDeploymentWithGlobalDictDefaults<TOsUpdatePodsProbeConfig>
-    : BaseOsUpdatePodsProbeWithGlobalDictDefaults<TOsUpdatePodsProbeConfig, V1Deployment>
+public abstract class BaseOsUpdateDeploymentWithGlobalDict<TOsUpdatePodsProbeConfig>
+    : BaseOsUpdatePodsProbeWithGlobalDict<TOsUpdatePodsProbeConfig, V1Deployment>
     where TOsUpdatePodsProbeConfig : OsUpdatePodsProbeConfig, new()
 {
     protected override bool IsReplicaSetAvailable(V1Deployment replicaSet)

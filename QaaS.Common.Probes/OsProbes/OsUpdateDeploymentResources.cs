@@ -12,7 +12,7 @@ namespace QaaS.Common.Probes.OsProbes;
 /// </summary>
 /// <qaas-docs group="Cluster orchestration" subgroup="Resource tuning" />
 public class OsUpdateDeploymentResources
-    : BaseOsUpdateDeploymentWithGlobalDictDefaults<OsUpdateResourcesProbeConfig>
+    : BaseOsUpdateDeploymentWithGlobalDict<OsUpdateResourcesProbeConfig>
 {
     protected override IEnumerable<ProbeGlobalDictReadRequest> GetAdditionalGlobalDictionaryReadRequests(
         IConfiguration localConfiguration)

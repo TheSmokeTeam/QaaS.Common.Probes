@@ -11,7 +11,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Permissions" />
 public class UpsertRabbitMqPermissions
-    : BaseRabbitMqManagementObjectsManipulationWithGlobalDictDefaults<UpsertRabbitMqPermissionsConfig, RabbitMqPermissionConfig>
+    : BaseRabbitMqManagementObjectsManipulationWithGlobalDict<UpsertRabbitMqPermissionsConfig, RabbitMqPermissionConfig>
 {
     protected override IEnumerable<ProbeGlobalDictReadRequest> GetAdditionalGlobalDictionaryReadRequests(
         IConfiguration localConfiguration)

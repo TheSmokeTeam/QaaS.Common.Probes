@@ -16,7 +16,7 @@ namespace QaaS.Common.Probes.OsProbes;
 /// Probe that edits yaml config maps
 /// </summary>
 /// <qaas-docs group="Cluster orchestration" subgroup="Config maps" />
-public class OsEditYamlConfigMap : BaseOsProbeWithGlobalDictDefaults<OsEditYamlConfigMapConfig>
+public class OsEditYamlConfigMap : BaseOsProbeWithGlobalDict<OsEditYamlConfigMapConfig>
 {
     protected override IEnumerable<ProbeGlobalDictReadRequest> GetAdditionalGlobalDictionaryReadRequests(
         IConfiguration localConfiguration)

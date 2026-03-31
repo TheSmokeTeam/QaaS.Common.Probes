@@ -12,7 +12,7 @@ namespace QaaS.Common.Probes.OsProbes;
 /// </summary>
 /// <qaas-docs group="Cluster orchestration" subgroup="Image rollout" />
 public class OsUpdateStatefulSetImage
-    : BaseOsUpdateStatefulSetWithGlobalDictDefaults<OsUpdateImageProbeConfig>
+    : BaseOsUpdateStatefulSetWithGlobalDict<OsUpdateImageProbeConfig>
 {
     protected override IEnumerable<ProbeGlobalDictReadRequest> GetAdditionalGlobalDictionaryReadRequests(
         IConfiguration localConfiguration)

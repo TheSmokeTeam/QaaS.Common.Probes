@@ -12,7 +12,7 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Virtual hosts lifecycle" />
 public class CreateRabbitMqVirtualHosts
-    : BaseRabbitMqManagementObjectsManipulationWithGlobalDictDefaults<CreateRabbitMqVirtualHostsConfig, RabbitMqVirtualHostConfig>
+    : BaseRabbitMqManagementObjectsManipulationWithGlobalDict<CreateRabbitMqVirtualHostsConfig, RabbitMqVirtualHostConfig>
 {
     private static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
