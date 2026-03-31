@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Elasticsearch.Net;
 using Moq;
 using Nest;
@@ -20,7 +20,7 @@ public class EmptyElasticIndicesTests
         typeof(ResponseBase).GetField("_originalApiCall", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
     private readonly FieldInfo _elasticClientFieldInfo =
-        typeof(BaseElasticProbe<EmptyElasticIndicesConfig>).GetField("ElasticClient",
+        typeof(BaseElasticProbeWithGlobalDict<EmptyElasticIndicesConfig>).GetField("ElasticClient",
             BindingFlags.Instance | BindingFlags.NonPublic)!;
 
     private readonly MethodInfo _runElasticProbeMethod = typeof(EmptyElasticIndices)

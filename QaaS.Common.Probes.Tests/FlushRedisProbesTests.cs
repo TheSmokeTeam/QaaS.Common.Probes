@@ -47,7 +47,7 @@ public class FlushRedisProbesTests
 
         var probe = new FlushAllRedis
         {
-            Configuration = new BaseRedisConfig(),
+            Configuration = new RedisServerProbeConfig(),
             Context = Globals.Context
         };
         SetHostNames(probe.Configuration, "localhost");

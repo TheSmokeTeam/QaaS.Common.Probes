@@ -1,7 +1,9 @@
+using Microsoft.Extensions.Configuration;
 using k8s;
 using k8s.Models;
 using QaaS.Common.Probes.ConfigurationObjects.Os;
 using QaaS.Common.Probes.Extensions;
+using QaaS.Common.Probes.Infrastructure.ProbeGlobalDict;
 
 namespace QaaS.Common.Probes.OsProbes;
 
@@ -10,8 +12,21 @@ namespace QaaS.Common.Probes.OsProbes;
 /// </summary>
 /// <qaas-docs group="Cluster orchestration" subgroup="Image rollout" />
 public class OsUpdateStatefulSetImage
-    : BaseOsUpdateStatefulSet<OsUpdateImageProbeConfig>
+    : BaseOsUpdateStatefulSetWithGlobalDict<OsUpdateImageProbeConfig>
 {
+    protected override IEnumerable<ProbeGlobalDictReadRequest> GetAdditionalGlobalDictionaryReadRequests(
+        IConfiguration localConfiguration)
+    {
+        var replicaSetName = localConfiguration[nameof(OsUpdateImageProbeConfig.ReplicaSetName)];
+        var containerName = localConfiguration[nameof(OsUpdateImageProbeConfig.ContainerName)];
+        if (!string.IsNullOrWhiteSpace(replicaSetName) && !string.IsNullOrWhiteSpace(containerName))
+        {
+            yield return new ProbeGlobalDictReadRequest("recovery",
+                BuildGlobalDictionaryAliasPath("Os", "Recovery", "Image", "StatefulSet", replicaSetName,
+                    containerName));
+        }
+    }
+
     protected override V1StatefulSet UpdateReplicaSet(V1StatefulSet replicaSet)
     {
         replicaSet.Spec.Template =
@@ -21,4 +36,21 @@ public class OsUpdateStatefulSetImage
         return Kubernetes.ReplaceNamespacedStatefulSet(replicaSet, Configuration.ReplicaSetName,
             Configuration.Openshift!.Namespace);
     }
+
+    protected override object? BuildRecoveryConfigurationPatch(V1StatefulSet replicaSet)
+    {
+        var container = replicaSet.Spec.Template.Spec.Containers
+            .SingleOrDefault(existingContainer => existingContainer.Name == Configuration.ContainerName);
+        return container == null
+            ? null
+            : new
+            {
+                ContainerName = container.Name,
+                DesiredImage = container.Image
+            };
+    }
+
+    protected override IReadOnlyList<string> GetRecoveryAliasPath()
+        => BuildGlobalDictionaryAliasPath("Os", "Recovery", "Image", "StatefulSet", Configuration.ReplicaSetName!,
+            Configuration.ContainerName!);
 }

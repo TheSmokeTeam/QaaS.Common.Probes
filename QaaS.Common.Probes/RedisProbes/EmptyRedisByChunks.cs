@@ -8,7 +8,7 @@ namespace QaaS.Common.Probes.RedisProbes;
 /// <summary>
 /// Scans the selected Redis database in batches and deletes matching keys, optionally filtering them by a regular expression.
 /// </summary>
-public class EmptyRedisByChunks<TEmptyRedisByChunksProbeConfig> : BaseRedisProbe<TEmptyRedisByChunksProbeConfig>
+public class EmptyRedisByChunks<TEmptyRedisByChunksProbeConfig> : BaseRedisProbeWithGlobalDict<TEmptyRedisByChunksProbeConfig>
     where TEmptyRedisByChunksProbeConfig : RedisDataBaseBatchProbeConfig, new()
 {
     protected override void RunRedisProbe()

@@ -1,5 +1,7 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using QaaS.Common.Probes.ConfigurationObjects.RabbitMq;
+using QaaS.Common.Probes.Infrastructure.ProbeGlobalDict;
 using RabbitMQ.Client;
 
 namespace QaaS.Common.Probes.RabbitMqProbes;
@@ -8,10 +10,17 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// Creates one or more RabbitMQ queues with the configured queue arguments.
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Queues lifecycle" />
-public class CreateRabbitMqQueues : BaseRabbitMqObjectsManipulation<CreateRabbitMqQueuesConfig, RabbitMqQueueConfig>
+public class CreateRabbitMqQueues
+    : BaseRabbitMqObjectsManipulationWithGlobalDict<CreateRabbitMqQueuesConfig, RabbitMqQueueConfig>
 {
-    protected override IEnumerable<RabbitMqQueueConfig> GetObjectsToManipulateConfigurations() => Configuration.Queues!;
+    protected override IEnumerable<ProbeGlobalDictReadRequest> GetAdditionalGlobalDictionaryReadRequests(
+        IConfiguration localConfiguration)
+    {
+        yield return new ProbeGlobalDictReadRequest("recovery",
+            BuildGlobalDictionaryAliasPath("RabbitMq", "Recovery", "Queues"));
+    }
 
+    protected override IEnumerable<RabbitMqQueueConfig> GetObjectsToManipulateConfigurations() => Configuration.Queues!;
 
     protected override void ManipulateObject(IChannel channel, RabbitMqQueueConfig objectToManipulateConfig)
     {
@@ -19,7 +28,7 @@ public class CreateRabbitMqQueues : BaseRabbitMqObjectsManipulation<CreateRabbit
                 objectToManipulateConfig.Exclusive, objectToManipulateConfig.AutoDelete,
                 objectToManipulateConfig.Arguments)
             .GetAwaiter().GetResult();
-        Context.Logger.LogDebug("Created queue {QueueName} in the rabbitmq {RabbitmqConnectionString}"
-            , objectToManipulateConfig.Name, RabbitmqConnectionString);
+        Context.Logger.LogDebug("Created queue {QueueName} in the rabbitmq {RabbitmqConnectionString}",
+            objectToManipulateConfig.Name, RabbitmqConnectionString);
     }
 }

@@ -1,7 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using QaaS.Common.Probes.ConfigurationObjects.RabbitMq;
+using QaaS.Common.Probes.Infrastructure.ProbeGlobalDict;
 
 namespace QaaS.Common.Probes.RabbitMqProbes;
 
@@ -10,12 +12,19 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Virtual hosts lifecycle" />
 public class CreateRabbitMqVirtualHosts
-    : BaseRabbitMqManagementObjectsManipulation<CreateRabbitMqVirtualHostsConfig, RabbitMqVirtualHostConfig>
+    : BaseRabbitMqManagementObjectsManipulationWithGlobalDict<CreateRabbitMqVirtualHostsConfig, RabbitMqVirtualHostConfig>
 {
     private static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
+
+    protected override IEnumerable<ProbeGlobalDictReadRequest> GetAdditionalGlobalDictionaryReadRequests(
+        IConfiguration localConfiguration)
+    {
+        yield return new ProbeGlobalDictReadRequest("recovery",
+            BuildGlobalDictionaryAliasPath("RabbitMq", "Recovery", "VirtualHosts"));
+    }
 
     protected override IEnumerable<RabbitMqVirtualHostConfig> GetObjectsToManipulateConfigurations()
         => Configuration.VirtualHosts!;

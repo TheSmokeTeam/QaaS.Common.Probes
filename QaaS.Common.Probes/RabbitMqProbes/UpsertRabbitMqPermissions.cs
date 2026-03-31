@@ -1,6 +1,8 @@
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using QaaS.Common.Probes.ConfigurationObjects.RabbitMq;
+using QaaS.Common.Probes.Infrastructure.ProbeGlobalDict;
 
 namespace QaaS.Common.Probes.RabbitMqProbes;
 
@@ -9,8 +11,15 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 /// </summary>
 /// <qaas-docs group="RabbitMQ administration" subgroup="Permissions" />
 public class UpsertRabbitMqPermissions
-    : BaseRabbitMqManagementObjectsManipulation<UpsertRabbitMqPermissionsConfig, RabbitMqPermissionConfig>
+    : BaseRabbitMqManagementObjectsManipulationWithGlobalDict<UpsertRabbitMqPermissionsConfig, RabbitMqPermissionConfig>
 {
+    protected override IEnumerable<ProbeGlobalDictReadRequest> GetAdditionalGlobalDictionaryReadRequests(
+        IConfiguration localConfiguration)
+    {
+        yield return new ProbeGlobalDictReadRequest("recovery",
+            BuildGlobalDictionaryAliasPath("RabbitMq", "Recovery", "Permissions"));
+    }
+
     protected override IEnumerable<RabbitMqPermissionConfig> GetObjectsToManipulateConfigurations()
         => Configuration.Permissions!;
 

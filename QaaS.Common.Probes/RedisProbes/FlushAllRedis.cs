@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using QaaS.Framework.Protocols.ConfigurationObjects.Redis;
+using Microsoft.Extensions.Logging;
+using QaaS.Common.Probes.ConfigurationObjects.Redis;
 
 namespace QaaS.Common.Probes.RedisProbes;
 
@@ -7,7 +7,7 @@ namespace QaaS.Common.Probes.RedisProbes;
 /// Runs Redis FLUSHALL against the configured server to remove keys from every database.
 /// </summary>
 /// <qaas-docs group="Redis maintenance" subgroup="Database flush" />
-public class FlushAllRedis : BaseRedisProbe<BaseRedisConfig>
+public class FlushAllRedis : BaseRedisProbeWithGlobalDict<RedisServerProbeConfig>
 {
     private const string FlushAllCommand = "FLUSHALL";
 

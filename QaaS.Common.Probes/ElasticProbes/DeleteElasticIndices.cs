@@ -9,7 +9,7 @@ namespace QaaS.Common.Probes.ElasticProbes;
 /// Deletes every Elasticsearch index that matches the configured index pattern.
 /// </summary>
 /// <qaas-docs group="Databases" subgroup="Elasticsearch" />
-public class DeleteElasticIndices : BaseElasticProbe<DeleteElasticIndicesConfig>
+public class DeleteElasticIndices : BaseElasticProbeWithGlobalDict<DeleteElasticIndicesConfig>
 {
     protected virtual IEnumerable<string> GetIndexNames()
     {

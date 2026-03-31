@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Oracle.ManagedDataAccess.Client;
 
 namespace QaaS.Common.Probes.SqlProbes;
@@ -7,7 +7,7 @@ namespace QaaS.Common.Probes.SqlProbes;
 /// Truncates the configured Oracle tables in the order they are listed.
 /// </summary>
 /// <qaas-docs group="SQL maintenance" subgroup="Oracle SQL tables" />
-public class OracleSqlDataBaseTablesTruncate : BaseSqlDataBaseTablesTruncateProbe
+public class OracleSqlDataBaseTablesTruncate : BaseSqlDataBaseTablesTruncateProbeWithGlobalDict
 {
     protected override IDbConnection CreateDbConnection()
         => new OracleConnection(Configuration.ConnectionString);

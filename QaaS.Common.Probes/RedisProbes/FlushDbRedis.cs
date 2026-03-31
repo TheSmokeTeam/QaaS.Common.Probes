@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using QaaS.Common.Probes.ConfigurationObjects.Redis;
 
 namespace QaaS.Common.Probes.RedisProbes;
@@ -7,7 +7,7 @@ namespace QaaS.Common.Probes.RedisProbes;
 /// Runs Redis FLUSHDB against the selected Redis database.
 /// </summary>
 /// <qaas-docs group="Redis maintenance" subgroup="Database flush" />
-public class FlushDbRedis : BaseRedisProbe<RedisDataBaseProbeBaseConfig>
+public class FlushDbRedis : BaseRedisProbeWithGlobalDict<RedisDataBaseProbeBaseConfig>
 {
     private const string FlushDbCommand = "FLUSHDB";
 

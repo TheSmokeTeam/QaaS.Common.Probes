@@ -1,13 +1,18 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using QaaS.Common.Probes.ConfigurationObjects;
 
 namespace QaaS.Common.Probes.ConfigurationObjects.RabbitMq;
 
 /// <summary>
 /// Base rabbitmq configurations relevant to any action related to rabbitmq
 /// </summary>
-public abstract record BaseRabbitMqConfig
+public abstract record BaseRabbitMqConfig : IUseGlobalDictProbeConfiguration
 {
+    [Description("When true, missing RabbitMQ probe configuration keys can be resolved from the shared global dictionary before local values are applied."),
+     DefaultValue(false)]
+    public bool UseGlobalDict { get; set; }
+
     [Required, Description("Rabbitmq hostname")]
     public string? Host { get; set; }
 

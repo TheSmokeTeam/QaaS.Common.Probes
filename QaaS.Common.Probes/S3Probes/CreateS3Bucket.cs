@@ -8,7 +8,7 @@ namespace QaaS.Common.Probes.S3Probes;
 /// Ensures the configured S3 bucket exists by creating it when it is missing.
 /// </summary>
 /// <qaas-docs group="Databases" subgroup="S3" />
-public class CreateS3Bucket : BaseS3Probe<CreateS3BucketConfig>
+public class CreateS3Bucket : BaseS3ProbeWithGlobalDict<CreateS3BucketConfig>
 {
     protected override void RunS3Probe()
     {
