@@ -75,6 +75,30 @@ public class OpenshiftAuthenticationTests
         Assert.That(exception.Message, Does.Contain("401"));
     }
 
+    [Test]
+    public void CreateKubernetesClient_WhenAuthorizationRedirectDoesNotContainAccessToken_ShouldThrowHelpfulException()
+    {
+        using var listener = CreateStartedListener(out var port);
+
+        var serverTask = Task.Run(async () =>
+        {
+            await HandleOauthDiscoveryAsync(listener, port);
+
+            var context = await listener.GetContextAsync();
+            context.Response.StatusCode = 302;
+            context.Response.RedirectLocation = $"http://127.0.0.1:{port}/callback?code=test-code&state=1";
+            context.Response.Close();
+        });
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            OpenshiftAuthentication.CreateKubernetesClient($"http://127.0.0.1:{port}", "user", "pass"));
+
+        serverTask.GetAwaiter().GetResult();
+
+        Assert.That(exception, Is.Not.TypeOf<NullReferenceException>());
+        Assert.That(exception!.Message, Does.Contain("did not contain an access token"));
+    }
+
     private static async Task HandleOauthDiscoveryAsync(HttpListener listener, int port)
     {
         var context = await listener.GetContextAsync();
