@@ -50,13 +50,13 @@ public class S3ProbesTests
     {
         // Arrange
         var s3ClientMock = new Mock<IAmazonS3>();
-        s3ClientMock.Setup(m => m.ListBucketsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ListBucketsResponse
-            {
-                Buckets = [new S3Bucket { BucketName = "other-bucket" }]
-            });
-
         var dataTransferMock = new Mock<IS3Client>();
+        dataTransferMock.Setup(m => m.EmptyS3Bucket("target-bucket", "prefix/"))
+            .ThrowsAsync(new AmazonS3Exception("missing")
+            {
+                StatusCode = HttpStatusCode.NotFound,
+                ErrorCode = "NoSuchBucket"
+            });
 
         var probe = new TestableEmptyS3Bucket
         {
@@ -70,10 +70,10 @@ public class S3ProbesTests
         probe.SetClients(s3ClientMock.Object, dataTransferMock.Object);
 
         // Act
-        probe.InvokeRunS3Probe();
+        Assert.DoesNotThrow(() => probe.InvokeRunS3Probe());
 
         // Assert
-        dataTransferMock.Verify(m => m.EmptyS3Bucket(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        dataTransferMock.Verify(m => m.EmptyS3Bucket("target-bucket", "prefix/"), Times.Once);
     }
 
     [Test]
@@ -81,12 +81,6 @@ public class S3ProbesTests
     {
         // Arrange
         var s3ClientMock = new Mock<IAmazonS3>();
-        s3ClientMock.Setup(m => m.ListBucketsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ListBucketsResponse
-            {
-                Buckets = [new S3Bucket { BucketName = "target-bucket" }]
-            });
-
         var dataTransferMock = new Mock<IS3Client>();
         dataTransferMock.Setup(m => m.EmptyS3Bucket(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(new List<DeleteObjectsResponse>
@@ -124,13 +118,13 @@ public class S3ProbesTests
     {
         // Arrange
         var s3ClientMock = new Mock<IAmazonS3>();
-        s3ClientMock.Setup(m => m.ListBucketsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ListBucketsResponse
-            {
-                Buckets = [new S3Bucket { BucketName = "other-bucket" }]
-            });
-
         var dataTransferMock = new Mock<IS3Client>();
+        dataTransferMock.Setup(m => m.EmptyS3Bucket("target-bucket"))
+            .ThrowsAsync(new AmazonS3Exception("missing")
+            {
+                StatusCode = HttpStatusCode.NotFound,
+                ErrorCode = "NoSuchBucket"
+            });
 
         var probe = new TestableDeleteS3Bucket
         {
@@ -143,10 +137,10 @@ public class S3ProbesTests
         probe.SetClients(s3ClientMock.Object, dataTransferMock.Object);
 
         // Act
-        probe.InvokeRunS3Probe();
+        Assert.DoesNotThrow(() => probe.InvokeRunS3Probe());
 
         // Assert
-        dataTransferMock.Verify(m => m.EmptyS3Bucket(It.IsAny<string>()), Times.Never);
+        dataTransferMock.Verify(m => m.EmptyS3Bucket("target-bucket"), Times.Once);
         s3ClientMock.Verify(m => m.DeleteBucketAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -155,11 +149,6 @@ public class S3ProbesTests
     {
         // Arrange
         var s3ClientMock = new Mock<IAmazonS3>();
-        s3ClientMock.Setup(m => m.ListBucketsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ListBucketsResponse
-            {
-                Buckets = [new S3Bucket { BucketName = "target-bucket" }]
-            });
         s3ClientMock.Setup(m => m.DeleteBucketAsync("target-bucket", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DeleteBucketResponse { HttpStatusCode = HttpStatusCode.OK });
 
@@ -198,10 +187,13 @@ public class S3ProbesTests
     public void TestCreateS3Bucket_WhenBucketAlreadyExists_ShouldNotCreateBucket()
     {
         var s3ClientMock = new Mock<IAmazonS3>();
-        s3ClientMock.Setup(m => m.ListBucketsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ListBucketsResponse
+        s3ClientMock.Setup(m => m.PutBucketAsync(
+                It.Is<PutBucketRequest>(request => request.BucketName == "target-bucket"),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AmazonS3Exception("exists")
             {
-                Buckets = [new S3Bucket { BucketName = "target-bucket" }]
+                StatusCode = HttpStatusCode.Conflict,
+                ErrorCode = "BucketAlreadyOwnedByYou"
             });
 
         var dataTransferMock = new Mock<IS3Client>();
@@ -216,20 +208,17 @@ public class S3ProbesTests
         };
         probe.SetClients(s3ClientMock.Object, dataTransferMock.Object);
 
-        probe.InvokeRunS3Probe();
+        Assert.DoesNotThrow(() => probe.InvokeRunS3Probe());
 
-        s3ClientMock.Verify(m => m.PutBucketAsync(It.IsAny<PutBucketRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        s3ClientMock.Verify(m => m.PutBucketAsync(
+            It.Is<PutBucketRequest>(request => request.BucketName == "target-bucket"),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
     public void TestCreateS3Bucket_WhenBucketIsMissing_ShouldCreateBucket()
     {
         var s3ClientMock = new Mock<IAmazonS3>();
-        s3ClientMock.Setup(m => m.ListBucketsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ListBucketsResponse
-            {
-                Buckets = [new S3Bucket { BucketName = "other-bucket" }]
-            });
         s3ClientMock.Setup(m => m.PutBucketAsync(
                 It.Is<PutBucketRequest>(request => request.BucketName == "target-bucket"),
                 It.IsAny<CancellationToken>()))

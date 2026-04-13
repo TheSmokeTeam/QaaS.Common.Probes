@@ -19,9 +19,11 @@ public class OsExecuteCommandsInContainers : BaseOsProbe<OsExecuteCommandsInCont
 
     protected override void RunOsProbe()
     {
-        var pods = new List<V1Pod>();
-        pods = Configuration.ApplicationLabels!.Aggregate(pods, (current, label)
-            => current.Concat(GetAllPods(label).Items).ToList());
+        var pods = Configuration.ApplicationLabels!
+            .SelectMany(label => GetAllPods(label).Items)
+            .GroupBy(pod => $"{pod.Namespace()}/{pod.Name()}", StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToList();
 
         // if no pods were found skip rest of the function
         if (pods.Count <= 0)
@@ -59,7 +61,15 @@ public class OsExecuteCommandsInContainers : BaseOsProbe<OsExecuteCommandsInCont
         demux.Start();
 
         using var stream = demux.GetStream(1, 1);
-        return ReadAvailableOutput(stream).Replace("\r", "").Replace("\n", "");
+        var standardOutput = ReadAvailableOutput(stream);
+        var executionError = TryReadStreamOutput(demux, 3, 3);
+        if (!string.IsNullOrWhiteSpace(executionError))
+        {
+            throw new InvalidOperationException(
+                $"Command execution failed for pod '{pod.Name()}' container '{containerName}': {executionError.Trim()}");
+        }
+
+        return standardOutput.Replace("\r", "").Replace("\n", "");
     }
 
     private static string ReadAvailableOutput(Stream stream)
@@ -83,7 +93,7 @@ public class OsExecuteCommandsInContainers : BaseOsProbe<OsExecuteCommandsInCont
                     break;
                 }
 
-                builder.Append(Encoding.Default.GetString(buffer, 0, bytesRead));
+                builder.Append(Encoding.UTF8.GetString(buffer, 0, bytesRead));
             }
             catch (OperationCanceledException)
             {
@@ -92,6 +102,19 @@ public class OsExecuteCommandsInContainers : BaseOsProbe<OsExecuteCommandsInCont
         }
 
         return builder.ToString();
+    }
+
+    private static string TryReadStreamOutput(StreamDemuxer demuxer, byte? index, byte? streamType)
+    {
+        try
+        {
+            using var stream = demuxer.GetStream(index, streamType);
+            return ReadAvailableOutput(stream);
+        }
+        catch
+        {
+            return string.Empty;
+        }
     }
 
     /// <summary>

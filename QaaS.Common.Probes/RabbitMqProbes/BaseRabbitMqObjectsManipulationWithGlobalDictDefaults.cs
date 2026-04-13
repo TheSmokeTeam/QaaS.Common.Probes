@@ -21,11 +21,13 @@ public abstract class BaseRabbitMqObjectsManipulationWithGlobalDict<TRabbitMqObj
 
     protected virtual IConnectionFactory GetRabbitConnection()
     {
-        RabbitmqConnectionString =
-            $"amqp://{Configuration.Username}:{Configuration.Password}@{Configuration.Host}:{Configuration.Port}";
+        RabbitmqConnectionString = $"amqp://{Configuration.Host}:{Configuration.Port} (vhost: {Configuration.VirtualHost})";
         _connectionFactory = new ConnectionFactory
         {
-            Uri = new Uri(RabbitmqConnectionString),
+            HostName = Configuration.Host!,
+            Port = Configuration.Port,
+            UserName = Configuration.Username,
+            Password = Configuration.Password,
             VirtualHost = Configuration.VirtualHost
         };
         return _connectionFactory;

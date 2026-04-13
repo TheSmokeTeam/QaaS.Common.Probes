@@ -1,3 +1,4 @@
+using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Logging;
 using QaaS.Common.Probes.ConfigurationObjects.S3;
@@ -10,24 +11,32 @@ namespace QaaS.Common.Probes.S3Probes;
 /// <qaas-docs group="Databases" subgroup="S3" />
 public class CreateS3Bucket : BaseS3ProbeWithGlobalDict<CreateS3BucketConfig>
 {
+    /// <summary>
+    /// Creates the configured bucket and treats "already owned by you" as a successful no-op so repeated runs stay idempotent.
+    /// </summary>
     protected override void RunS3Probe()
     {
-        var bucketExists = S3Client.ListBucketsAsync().Result.Buckets
-            .Any(bucket => string.Equals(bucket.BucketName, Configuration.StorageBucket, StringComparison.Ordinal));
-        if (bucketExists)
+        try
+        {
+            var response = S3Client.PutBucketAsync(new PutBucketRequest
+            {
+                BucketName = Configuration.StorageBucket
+            }).Result;
+
+            Context.Logger.LogInformation(
+                "Created S3 bucket {S3BucketName}, http response status code is {HttpResponseStatusCode}",
+                Configuration.StorageBucket,
+                response.HttpStatusCode);
+        }
+        catch (AggregateException exception)
+            when (exception.InnerException is AmazonS3Exception amazonS3Exception &&
+                  IsBucketAlreadyOwnedByCaller(amazonS3Exception))
         {
             Context.Logger.LogInformation("S3 bucket {S3BucketName} already exists", Configuration.StorageBucket);
-            return;
         }
-
-        var response = S3Client.PutBucketAsync(new PutBucketRequest
-        {
-            BucketName = Configuration.StorageBucket
-        }).Result;
-
-        Context.Logger.LogInformation(
-            "Created S3 bucket {S3BucketName}, http response status code is {HttpResponseStatusCode}",
-            Configuration.StorageBucket,
-            response.HttpStatusCode);
     }
+
+    private static bool IsBucketAlreadyOwnedByCaller(AmazonS3Exception exception)
+        => exception.StatusCode == System.Net.HttpStatusCode.Conflict &&
+           string.Equals(exception.ErrorCode, "BucketAlreadyOwnedByYou", StringComparison.Ordinal);
 }

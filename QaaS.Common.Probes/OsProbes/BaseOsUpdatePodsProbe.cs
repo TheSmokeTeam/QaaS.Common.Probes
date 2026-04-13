@@ -17,10 +17,14 @@ public abstract class
         replicaSet = UpdateReplicaSet(replicaSet);
         var desiredGeneration = GetReplicaSetGeneration(replicaSet);
         Context.Logger.LogInformation("Updated ReplicaSet, waiting for ReplicaSet to reach desired state");
-        WaitForReplicaCountToReachDesiredState(replicaSet,
+        if (!WaitForReplicaCountToReachDesiredState(replicaSet,
             Configuration.IntervalBetweenDesiredStateChecksMs,
             Configuration.TimeoutWaitForDesiredStateSeconds,
-            desiredGeneration);
+            desiredGeneration))
+        {
+            throw new TimeoutException(
+                $"ReplicaSet '{Configuration.ReplicaSetName}' did not reach the desired state within {Configuration.TimeoutWaitForDesiredStateSeconds} seconds.");
+        }
     }
 
     /// <summary>
@@ -33,7 +37,7 @@ public abstract class
     /// <param name="maximumTimeOutSeconds"> The maximum timeout in seconds before the function ends and
     /// raises an error log</param>
     /// <param name="desiredGeneration">The generation that must be observed by the controller before the probe completes</param>
-    private void WaitForReplicaCountToReachDesiredState(TReplicaSet replicaSet,
+    private bool WaitForReplicaCountToReachDesiredState(TReplicaSet replicaSet,
         int milliSecondsTimeOutBetweenChecks,
         int maximumTimeOutSeconds,
         long? desiredGeneration)
@@ -52,7 +56,7 @@ public abstract class
                     "ReplicaSet {ReplicaSetName} has not finished updating before timeout of" +
                     " {SecondsTimeout} seconds was reached",
                     Configuration.ReplicaSetName, maximumTimeOutSeconds);
-                return;
+                return false;
             }
 
             Thread.Sleep(milliSecondsTimeOutBetweenChecks);
@@ -63,6 +67,7 @@ public abstract class
         Context.Logger.LogInformation("Finished updating ReplicaSet {ReplicaSetName} in " +
                                       "{NumberOfMillisecondsItTookToScale} milliseconds successfully",
             Configuration.ReplicaSetName, stopWatch.ElapsedMilliseconds);
+        return true;
     }
 
     private bool HasReplicaSetReachedDesiredState(TReplicaSet replicaSet, long? desiredGeneration)

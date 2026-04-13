@@ -253,7 +253,7 @@ public class OsProbeLogicTests
     }
 
     [Test]
-    public void TestRunLoop_WhenTimeoutReached_ShouldReturnWithoutThrowing()
+    public void TestRunLoop_WhenTimeoutReached_ShouldThrowTimeoutException()
     {
         // Arrange
         var probe = new TestableRunLoopProbe([false, false, false])
@@ -267,7 +267,7 @@ public class OsProbeLogicTests
         };
 
         // Act + Assert
-        Assert.DoesNotThrow(() => probe.InvokeRunOsProbe());
+        Assert.Throws<TimeoutException>(() => probe.InvokeRunOsProbe());
         Assert.That(probe.UpdateReplicaSetCalls, Is.EqualTo(1));
         Assert.That(probe.AvailabilityChecks, Is.EqualTo(1));
     }

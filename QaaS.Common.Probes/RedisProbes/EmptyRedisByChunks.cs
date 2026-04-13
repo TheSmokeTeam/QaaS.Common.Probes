@@ -11,10 +11,15 @@ namespace QaaS.Common.Probes.RedisProbes;
 public class EmptyRedisByChunks<TEmptyRedisByChunksProbeConfig> : BaseRedisProbeWithGlobalDict<TEmptyRedisByChunksProbeConfig>
     where TEmptyRedisByChunksProbeConfig : RedisDataBaseBatchProbeConfig, new()
 {
+    /// <summary>
+    /// Scans the Redis database first, collects the keys that match the optional regex filter, and then deletes them in
+    /// configured chunk sizes.
+    /// </summary>
     protected override void RunRedisProbe()
     {
         Context.Logger.LogInformation("Emptying by chunks redis database {RedisDb}...", RedisDb);
         var cursor = 0L;
+        var keysToDelete = new List<RedisKey>();
         do
         {
             RedisResult[]? result;
@@ -32,12 +37,15 @@ public class EmptyRedisByChunks<TEmptyRedisByChunksProbeConfig> : BaseRedisProbe
                 throw new InvalidOperationException("Invalid response from redis database," +
                                                     $" received {result?.Length ?? 0} results, expected 2");
             cursor = (long)result[0];
-            var keysToDelete = ((RedisKey[])result[1]!)
-                .Where(ShouldDeleteKey)
-                .ToArray();
-            var deletedKeys = RedisDb.KeyDelete(keysToDelete);
-            Context.Logger.LogDebug("Successfully deleted a chunk of {DeletedKeys}", deletedKeys);
+            keysToDelete.AddRange(((RedisKey[])result[1]!)
+                .Where(ShouldDeleteKey));
         } while (cursor != 0);
+
+        foreach (var keyBatch in keysToDelete.Chunk(Configuration.BatchSize))
+        {
+            var deletedKeys = RedisDb.KeyDelete(keyBatch);
+            Context.Logger.LogDebug("Successfully deleted a chunk of {DeletedKeys}", deletedKeys);
+        }
     }
 
     private bool ShouldDeleteKey(RedisKey key)

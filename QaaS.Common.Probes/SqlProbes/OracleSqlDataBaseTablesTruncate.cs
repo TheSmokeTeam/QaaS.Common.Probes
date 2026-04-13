@@ -11,4 +11,10 @@ public class OracleSqlDataBaseTablesTruncate : BaseSqlDataBaseTablesTruncateProb
 {
     protected override IDbConnection CreateDbConnection()
         => new OracleConnection(Configuration.ConnectionString);
+
+    protected override string QuoteIdentifier(string identifier)
+    {
+        ValidateIdentifier(identifier);
+        return $"\"{identifier}\"";
+    }
 }

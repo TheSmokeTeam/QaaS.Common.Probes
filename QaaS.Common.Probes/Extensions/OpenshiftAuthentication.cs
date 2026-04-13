@@ -1,4 +1,6 @@
-﻿using System.Text;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Text;
 using k8s;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -10,38 +12,26 @@ namespace QaaS.Common.Probes.Extensions;
 /// </summary>
 public static class OpenshiftAuthentication
 {
-    private static readonly HttpClientHandler HttpClientHandler = new()
-    {
-        ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-    };
-
-    private static readonly HttpClient HttpClient = new(HttpClientHandler);
-
     /// <summary>
-    /// Get the authorization and token endpoints of the Openshift cluster.
-    /// Both endpoints lead to the cluster's required url through which the access token of a user is generated.
+    /// Get the authorization endpoint of the Openshift cluster.
+    /// This endpoint leads to the cluster's required url through which the access token of a user is generated.
     /// </summary>
     /// <param name="host">The url of the openshift cluster</param>
-    /// <returns>Tuple containing both auth url and token url.</returns>
-    private static (string, string) DiscoverAuthUrl(string host)
+    /// <param name="allowInvalidServerCertificates">Whether TLS certificate validation should be skipped while discovering the OAuth endpoint.</param>
+    /// <returns>The auth url.</returns>
+    private static string DiscoverAuthorizationEndpoint(string host, bool allowInvalidServerCertificates)
     {
         if (host[^1] == '/')
             host = host.Remove(host.Length - 1);
 
         var url = $"{host}/.well-known/oauth-authorization-server";
-        using var response = HttpClient.GetAsync(url).GetAwaiter().GetResult();
-        var oauthInfo = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        using var discoveryHttpClient = CreateHttpClient(allowInvalidServerCertificates);
+        using var response = discoveryHttpClient.GetAsync(url).GetAwaiter().GetResult();
+        var oauthInfo = ReadSuccessfulResponseContent(response, $"OpenShift OAuth discovery request to {url}");
         var jsonAuthInfo = JObject.Load(new JsonTextReader(new StringReader(oauthInfo)));
-        return (jsonAuthInfo["authorization_endpoint"]!.ToString(), jsonAuthInfo["token_endpoint"]!.ToString());
-    }
-
-    private static string ExtractToken(HttpResponseMessage responseMessage)
-    {
-        var jsonAuthInfo =
-            JObject.Load(new JsonTextReader(new StringReader(
-                responseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult())));
-
-        return jsonAuthInfo["access_token"]!.ToString();
+        return jsonAuthInfo["authorization_endpoint"]?.ToString()
+               ?? throw new InvalidOperationException(
+                   $"OpenShift OAuth discovery response from {url} did not contain an authorization endpoint.");
     }
 
     /// <summary>
@@ -50,34 +40,24 @@ public static class OpenshiftAuthentication
     /// <param name="host">The url of the openshift cluster</param>
     /// <param name="username">The username to authenticate.</param>
     /// <param name="password">The password of the username to authenticate.</param>
+    /// <param name="allowInvalidServerCertificates">Whether TLS certificate validation should be skipped for the discovery and authorization HTTP calls.</param>
     /// <returns>An access token to the Openshift cluster.</returns>
-    private static string GetToken(string host, string username, string password)
+    private static string GetToken(string host, string username, string password, bool allowInvalidServerCertificates)
     {
-        var (authorizationEndpoint, tokenEndpoint) = DiscoverAuthUrl(host);
-
+        var authorizationEndpoint = DiscoverAuthorizationEndpoint(host, allowInvalidServerCertificates);
         var authUrl =
-            $"{authorizationEndpoint}?response_type=code&client_id=openshift-challenging-client&state=1&code_challenge_method=S256";
+            $"{authorizationEndpoint}?response_type=token&client_id=openshift-challenging-client";
 
         var authBytes = Encoding.UTF8.GetBytes($"{username}:{password}");
 
-        // Request to get the sha256 code to send to the token endpoint
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, authUrl);
-        httpRequest.Headers.Add("authorization", $"Basic {Convert.ToBase64String(authBytes)}");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, authUrl);
+        httpRequest.Headers.Authorization =
+            new AuthenticationHeaderValue("Basic", Convert.ToBase64String(authBytes));
         httpRequest.Headers.Add("X-Csrf-Token", "1");
-        using var authorizationResponse = HttpClient.SendAsync(httpRequest).GetAwaiter().GetResult();
 
-        var location = authorizationResponse.RequestMessage!.RequestUri!.AbsoluteUri;
-        var sha256Code = location.Substring(location.IndexOf("?", StringComparison.Ordinal) + 1);
-
-        // Request to send the sha256 code from the previous GET request to the token endpoint
-        using var tokenRequest = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint);
-        tokenRequest.Headers.Add("Accept", "application/json");
-        tokenRequest.Headers.Add("Authorization", "Basic REDA=");
-        tokenRequest.Content = new StringContent($"{sha256Code}&grant_type=authorization_code", Encoding.UTF8,
-            "application/x-www-form-urlencoded");
-        using var tokenResponse = HttpClient.SendAsync(tokenRequest).GetAwaiter().GetResult();
-
-        return ExtractToken(tokenResponse);
+        using var authorizationHttpClient = CreateHttpClient(allowInvalidServerCertificates, allowAutoRedirect: false);
+        using var authorizationResponse = authorizationHttpClient.SendAsync(httpRequest).GetAwaiter().GetResult();
+        return ExtractAccessTokenFromAuthorizationResponse(authorizationResponse);
     }
 
     /// <summary>
@@ -90,20 +70,133 @@ public static class OpenshiftAuthentication
     /// <param name="cluster">The cluster to authenticate to</param>
     /// <param name="username">The username to authenticate.</param>
     /// <param name="password">The password of the username to authenticate.</param>
-    /// <returns>The changed <see cref="Kubernetes"/> object.</returns>
-    public static Kubernetes CreateKubernetesClient(string cluster, string username, string password)
+    /// <param name="allowInvalidServerCertificates">Whether TLS certificate validation should be skipped for this cluster connection.</param>
+    /// <returns>An authenticated <see cref="Kubernetes"/> client configured for the requested cluster.</returns>
+    public static Kubernetes CreateKubernetesClient(string cluster, string username, string password,
+        bool allowInvalidServerCertificates = false)
     {
         if (!cluster.StartsWith("http"))
             cluster = $"https://{cluster}";
 
         var k8SClientConfig = new KubernetesClientConfiguration
-            { Host = cluster, SkipTlsVerify = true };
+            { Host = cluster, SkipTlsVerify = allowInvalidServerCertificates };
         var k8SClientWithNoToken = new Kubernetes(k8SClientConfig);
-        var accessToken = GetToken(k8SClientWithNoToken.BaseUri.AbsoluteUri, username, password);
+        var accessToken = GetToken(k8SClientWithNoToken.BaseUri.AbsoluteUri, username, password,
+            allowInvalidServerCertificates);
         k8SClientConfig = new KubernetesClientConfiguration()
         {
-            Host = cluster, SkipTlsVerify = true, AccessToken = accessToken
+            Host = cluster, SkipTlsVerify = allowInvalidServerCertificates, AccessToken = accessToken
         };
         return new Kubernetes(k8SClientConfig);
+    }
+
+    /// <summary>
+    /// Builds an <see cref="HttpClient"/> for the OpenShift OAuth discovery and authorization calls.
+    /// </summary>
+    private static HttpClient CreateHttpClient(bool allowInvalidServerCertificates, bool allowAutoRedirect = true)
+    {
+        var handler = new HttpClientHandler
+        {
+            AllowAutoRedirect = allowAutoRedirect
+        };
+        if (allowInvalidServerCertificates)
+        {
+            handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
+        }
+
+        return new HttpClient(handler);
+    }
+
+    /// <summary>
+    /// Extracts the implicit-flow access token from the OpenShift authorization redirect response.
+    /// </summary>
+    private static string ExtractAccessTokenFromAuthorizationResponse(HttpResponseMessage authorizationResponse)
+    {
+        if (!IsRedirectStatusCode(authorizationResponse.StatusCode))
+        {
+            var responseContent = ReadResponseContent(authorizationResponse);
+            throw new InvalidOperationException(
+                $"OpenShift authorization request failed with status code {(int)authorizationResponse.StatusCode}: {responseContent}");
+        }
+
+        var redirectLocation = authorizationResponse.Headers.Location ?? authorizationResponse.RequestMessage?.RequestUri;
+        if (redirectLocation is null)
+        {
+            throw new InvalidOperationException(
+                "OpenShift authorization response did not include a redirect location containing an access token.");
+        }
+
+        if (!redirectLocation.IsAbsoluteUri && authorizationResponse.RequestMessage?.RequestUri is { } requestUri)
+        {
+            redirectLocation = new Uri(requestUri, redirectLocation);
+        }
+
+        if (TryReadUriParameter(redirectLocation, "access_token", out var accessToken))
+        {
+            return accessToken;
+        }
+
+        if (TryReadUriParameter(redirectLocation, "error", out var error))
+        {
+            var description = TryReadUriParameter(redirectLocation, "error_description", out var errorDescription)
+                ? $": {errorDescription}"
+                : string.Empty;
+            throw new InvalidOperationException($"OpenShift authorization failed with error '{error}'{description}");
+        }
+
+        throw new InvalidOperationException(
+            $"OpenShift authorization redirect did not contain an access token. Redirect location: {redirectLocation}");
+    }
+
+    /// <summary>
+    /// Reads the response body and throws a descriptive exception when the HTTP operation does not succeed.
+    /// </summary>
+    private static string ReadSuccessfulResponseContent(HttpResponseMessage responseMessage, string operationDescription)
+    {
+        var responseContent = ReadResponseContent(responseMessage);
+        if (!responseMessage.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException(
+                $"{operationDescription} failed with status code {(int)responseMessage.StatusCode}: {responseContent}");
+        }
+
+        return responseContent;
+    }
+
+    private static string ReadResponseContent(HttpResponseMessage responseMessage)
+        => responseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+
+    private static bool IsRedirectStatusCode(HttpStatusCode statusCode)
+        => (int)statusCode is >= 300 and < 400;
+
+    /// <summary>
+    /// Attempts to read a parameter from either the query string or fragment of a redirect URI.
+    /// </summary>
+    private static bool TryReadUriParameter(Uri uri, string parameterName, out string value)
+        => TryReadFormEncodedParameter(uri.Fragment, parameterName, out value)
+           || TryReadFormEncodedParameter(uri.Query, parameterName, out value);
+
+    /// <summary>
+    /// Attempts to read a single form-url-encoded parameter from a query-string or fragment payload.
+    /// </summary>
+    private static bool TryReadFormEncodedParameter(string valueSource, string parameterName, out string value)
+    {
+        var trimmedValueSource = valueSource.TrimStart('#', '?');
+        foreach (var encodedPair in trimmedValueSource.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var pair = encodedPair.Split('=', 2);
+            if (!string.Equals(Uri.UnescapeDataString(pair[0]), parameterName, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            value = pair.Length == 2
+                ? Uri.UnescapeDataString(pair[1].Replace('+', ' '))
+                : string.Empty;
+            return true;
+        }
+
+        value = string.Empty;
+        return false;
     }
 }

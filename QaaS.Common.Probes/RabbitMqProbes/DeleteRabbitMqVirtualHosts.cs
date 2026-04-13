@@ -13,19 +13,46 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 public class DeleteRabbitMqVirtualHosts
     : BaseRabbitMqManagementObjectsManipulationWithGlobalDict<DeleteRabbitMqVirtualHostsConfig, string>
 {
+    private CreateRabbitMqVirtualHostsConfig? _previousDefaults;
+    private VirtualHostRecoveryPayload? _previousRecovery;
+
     protected override IEnumerable<string> GetObjectsToManipulateConfigurations() => Configuration.VirtualHostNames!;
+
+    protected override void SaveResolvedConfigurationDefaults()
+    {
+        if (Configuration.UseGlobalDict)
+        {
+            _previousRecovery = RabbitMqRecoverySnapshotHelper.TryGetRecoveryPayload<VirtualHostRecoveryPayload>(Context,
+                BuildGlobalDictionaryAliasPath("RabbitMq", "Recovery", "VirtualHosts"));
+            _previousDefaults =
+                RabbitMqRecoverySnapshotHelper.TryGetConfigurationDefaults<CreateRabbitMqVirtualHostsConfig>(Context,
+                    BuildGlobalDictionaryAliasPath("RabbitMq", "ManagementDefaults"));
+        }
+
+        base.SaveResolvedConfigurationDefaults();
+    }
 
     public override void Run(IImmutableList<SessionData> sessionDataList, IImmutableList<DataSource> dataSourceList)
     {
         base.Run(sessionDataList, dataSourceList);
         if (Configuration.UseGlobalDict)
         {
+            var virtualHostNames = Configuration.VirtualHostNames!;
+            var virtualHosts = RabbitMqRecoverySnapshotHelper.FilterByNames(
+                _previousRecovery?.VirtualHosts ?? _previousDefaults?.VirtualHosts,
+                virtualHostNames,
+                virtualHost => virtualHost.Name);
+            if (virtualHosts.Length == 0)
+            {
+                virtualHosts = virtualHostNames
+                    .Select(name => new RabbitMqVirtualHostConfig { Name = name })
+                    .ToArray();
+            }
+
             SaveGlobalDictionaryPayload("recovery",
-                new
+                new VirtualHostRecoveryPayload
                 {
-                    VirtualHosts = Configuration.VirtualHostNames!
-                        .Select(name => new RabbitMqVirtualHostConfig { Name = name })
-                        .ToArray()
+                    VirtualHosts = virtualHosts
                 },
                 BuildGlobalDictionaryAliasPath("RabbitMq", "Recovery", "VirtualHosts"));
         }
@@ -36,5 +63,10 @@ public class DeleteRabbitMqVirtualHosts
         Context.Logger.LogDebug("Deleting rabbitmq virtual host {VirtualHostName}", objectToManipulateConfig);
         return SendManagementRequestAsync(httpClient, HttpMethod.Delete,
             $"vhosts/{EncodePathSegment(objectToManipulateConfig)}");
+    }
+
+    private sealed record VirtualHostRecoveryPayload
+    {
+        public RabbitMqVirtualHostConfig[]? VirtualHosts { get; init; }
     }
 }

@@ -13,19 +13,46 @@ namespace QaaS.Common.Probes.RabbitMqProbes;
 public class DeleteRabbitMqUsers
     : BaseRabbitMqManagementObjectsManipulationWithGlobalDict<DeleteRabbitMqUsersConfig, string>
 {
+    private CreateRabbitMqUsersConfig? _previousDefaults;
+    private UserRecoveryPayload? _previousRecovery;
+
     protected override IEnumerable<string> GetObjectsToManipulateConfigurations() => Configuration.Usernames!;
+
+    protected override void SaveResolvedConfigurationDefaults()
+    {
+        if (Configuration.UseGlobalDict)
+        {
+            _previousRecovery = RabbitMqRecoverySnapshotHelper.TryGetRecoveryPayload<UserRecoveryPayload>(Context,
+                BuildGlobalDictionaryAliasPath("RabbitMq", "Recovery", "Users"));
+            _previousDefaults = RabbitMqRecoverySnapshotHelper.TryGetConfigurationDefaults<CreateRabbitMqUsersConfig>(
+                Context,
+                BuildGlobalDictionaryAliasPath("RabbitMq", "ManagementDefaults"));
+        }
+
+        base.SaveResolvedConfigurationDefaults();
+    }
 
     public override void Run(IImmutableList<SessionData> sessionDataList, IImmutableList<DataSource> dataSourceList)
     {
         base.Run(sessionDataList, dataSourceList);
         if (Configuration.UseGlobalDict)
         {
+            var usernames = Configuration.Usernames!;
+            var users = RabbitMqRecoverySnapshotHelper.FilterByNames(
+                _previousRecovery?.Users ?? _previousDefaults?.Users,
+                usernames,
+                user => user.Username);
+            if (users.Length == 0)
+            {
+                users = usernames
+                    .Select(username => new RabbitMqUserConfig { Username = username })
+                    .ToArray();
+            }
+
             SaveGlobalDictionaryPayload("recovery",
-                new
+                new UserRecoveryPayload
                 {
-                    Users = Configuration.Usernames!
-                        .Select(username => new RabbitMqUserConfig { Username = username })
-                        .ToArray()
+                    Users = users
                 },
                 BuildGlobalDictionaryAliasPath("RabbitMq", "Recovery", "Users"));
         }
@@ -36,5 +63,10 @@ public class DeleteRabbitMqUsers
         Context.Logger.LogDebug("Deleting rabbitmq user {Username}", objectToManipulateConfig);
         return SendManagementRequestAsync(httpClient, HttpMethod.Delete,
             $"users/{EncodePathSegment(objectToManipulateConfig)}");
+    }
+
+    private sealed record UserRecoveryPayload
+    {
+        public RabbitMqUserConfig[]? Users { get; init; }
     }
 }

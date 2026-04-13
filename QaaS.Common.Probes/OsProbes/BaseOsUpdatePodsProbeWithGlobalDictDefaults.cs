@@ -23,10 +23,14 @@ public abstract class BaseOsUpdatePodsProbeWithGlobalDict<TOsUpdatePodsProbeConf
         replicaSet = UpdateReplicaSet(replicaSet);
         var desiredGeneration = GetReplicaSetGeneration(replicaSet);
         Context.Logger.LogInformation("Updated ReplicaSet, waiting for ReplicaSet to reach desired state");
-        WaitForReplicaCountToReachDesiredState(replicaSet,
+        if (!WaitForReplicaCountToReachDesiredState(replicaSet,
             Configuration.IntervalBetweenDesiredStateChecksMs,
             Configuration.TimeoutWaitForDesiredStateSeconds,
-            desiredGeneration);
+            desiredGeneration))
+        {
+            throw new TimeoutException(
+                $"ReplicaSet '{Configuration.ReplicaSetName}' did not reach the desired state within {Configuration.TimeoutWaitForDesiredStateSeconds} seconds.");
+        }
 
         // Recovery payloads are written only after the mutation converges so later probes never restore a half-applied state.
         // The alias path is computed lazily so legacy direct Run() tests keep working when global-dictionary support is disabled.
@@ -40,7 +44,7 @@ public abstract class BaseOsUpdatePodsProbeWithGlobalDict<TOsUpdatePodsProbeConf
         }
     }
 
-    private void WaitForReplicaCountToReachDesiredState(TReplicaSet replicaSet,
+    private bool WaitForReplicaCountToReachDesiredState(TReplicaSet replicaSet,
         int milliSecondsTimeOutBetweenChecks,
         int maximumTimeOutSeconds,
         long? desiredGeneration)
@@ -58,7 +62,7 @@ public abstract class BaseOsUpdatePodsProbeWithGlobalDict<TOsUpdatePodsProbeConf
                     "ReplicaSet {ReplicaSetName} has not finished updating before timeout of" +
                     " {SecondsTimeout} seconds was reached",
                     Configuration.ReplicaSetName, maximumTimeOutSeconds);
-                return;
+                return false;
             }
 
             Thread.Sleep(milliSecondsTimeOutBetweenChecks);
@@ -69,6 +73,7 @@ public abstract class BaseOsUpdatePodsProbeWithGlobalDict<TOsUpdatePodsProbeConf
         Context.Logger.LogInformation("Finished updating ReplicaSet {ReplicaSetName} in " +
                                       "{NumberOfMillisecondsItTookToScale} milliseconds successfully",
             Configuration.ReplicaSetName, stopWatch.ElapsedMilliseconds);
+        return true;
     }
 
     private bool HasReplicaSetReachedDesiredState(TReplicaSet replicaSet, long? desiredGeneration)

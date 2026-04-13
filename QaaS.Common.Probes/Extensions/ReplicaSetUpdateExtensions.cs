@@ -45,13 +45,13 @@ public static class ReplicaSetUpdateExtensions
         var newLimits = new Dictionary<string, ResourceQuantity>();
         var newRequests = new Dictionary<string, ResourceQuantity>();
         var cpuLimit = desiredResources?.Limits?.Cpu ??
-                       GetQuantity(containerResources.Limits, Cpu);
+                       GetQuantity(containerResources?.Limits, Cpu);
         var memoryLimit = desiredResources?.Limits?.Memory ??
-                          GetQuantity(containerResources.Limits, Memory);
+                          GetQuantity(containerResources?.Limits, Memory);
         var cpuRequests = desiredResources?.Requests?.Cpu ??
-                          GetQuantity(containerResources.Requests, Cpu);
+                          GetQuantity(containerResources?.Requests, Cpu);
         var memoryRequests = desiredResources?.Requests?.Memory ??
-                             GetQuantity(containerResources.Requests, Memory);
+                             GetQuantity(containerResources?.Requests, Memory);
         if (cpuLimit != null)
             newLimits.Add(Cpu, new ResourceQuantity(cpuLimit));
         if (memoryLimit != null)
@@ -122,6 +122,24 @@ public static class ReplicaSetUpdateExtensions
         }
 
         container.Env = envDict.Values.ToList();
+    }
+
+    public static void RestoreReplicaSetEnvVars(IList<V1Container> containers,
+        IReadOnlyDictionary<string, Dictionary<string, string?>> containerEnvVars)
+    {
+        foreach (var containerSnapshot in containerEnvVars)
+        {
+            var container = containers.FirstOrDefault(existingContainer => existingContainer.Name == containerSnapshot.Key)
+                            ?? throw new ArgumentException($"Could not find a container named '{containerSnapshot.Key}'");
+
+            container.Env = containerSnapshot.Value
+                .Select(environmentVariable => new V1EnvVar
+                {
+                    Name = environmentVariable.Key,
+                    Value = environmentVariable.Value
+                })
+                .ToList();
+        }
     }
 
     public static V1PodTemplateSpec TouchReplicaSetTemplate(this V1PodTemplateSpec template)

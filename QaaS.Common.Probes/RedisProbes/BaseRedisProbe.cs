@@ -57,6 +57,6 @@ public abstract class BaseRedisProbe<TBaseRedisProbeConfig> : BaseProbe<TBaseRed
     /// </summary>
     public void Dispose()
     {
-        _redisConnection.Dispose();
+        _redisConnection?.Dispose();
     }
 }

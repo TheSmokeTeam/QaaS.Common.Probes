@@ -3,6 +3,8 @@ using NUnit.Framework;
 using QaaS.Common.Probes.ConfigurationObjects.RabbitMq;
 using QaaS.Common.Probes.RabbitMqProbes;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
+using RabbitMQ.Client.Exceptions;
 
 namespace QaaS.Common.Probes.Tests;
 
@@ -264,6 +266,36 @@ public class RabbitMqProbeBranchTests
     }
 
     [Test]
+    public void TestCreateQueues_WhenBrokerReportsInequivalentDeclaration_ShouldThrowHelpfulException()
+    {
+        // Arrange
+        var channelMock = new Mock<IChannel>();
+        channelMock.Setup(m => m.QueueDeclareAsync(
+                "queue-a", true, false, false, It.IsAny<IDictionary<string, object?>>(), It.IsAny<bool>(),
+                It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationInterruptedException(new ShutdownEventArgs(ShutdownInitiator.Peer, 406,
+                "PRECONDITION_FAILED - inequivalent arg 'durable' for queue 'queue-a' in vhost '/'",
+                new Exception("broker closed channel"), CancellationToken.None)));
+
+        var probe = new TestableCreateRabbitMqQueues { Context = Globals.Context };
+
+        // Act
+        var exception = Assert.Throws<InvalidOperationException>(() => probe.InvokeManipulateObject(channelMock.Object,
+            new RabbitMqQueueConfig
+            {
+                Name = "queue-a",
+                Durable = true,
+                Exclusive = false,
+                AutoDelete = false
+            }));
+
+        // Assert
+        Assert.That(exception!.Message, Does.Contain("queue-a"));
+        Assert.That(exception.Message, Does.Contain("different configuration"));
+        Assert.That(exception.Message, Does.Contain("durable=True"));
+    }
+
+    [Test]
     public void TestDeleteQueues_ShouldCallQueueDelete()
     {
         // Arrange
@@ -300,6 +332,36 @@ public class RabbitMqProbeBranchTests
         // Assert
         channelMock.Verify(m => m.ExchangeDeleteAsync(
             "exchange-a", It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public void TestCreateExchanges_WhenBrokerReportsInequivalentDeclaration_ShouldThrowHelpfulException()
+    {
+        // Arrange
+        var channelMock = new Mock<IChannel>();
+        channelMock.Setup(m => m.ExchangeDeclareAsync(
+                "exchange-a", "direct", true, false, It.IsAny<IDictionary<string, object?>>(), It.IsAny<bool>(),
+                It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationInterruptedException(new ShutdownEventArgs(ShutdownInitiator.Peer, 406,
+                "PRECONDITION_FAILED - inequivalent arg 'type' for exchange 'exchange-a' in vhost '/'",
+                new Exception("broker closed channel"), CancellationToken.None)));
+
+        var probe = new TestableCreateRabbitMqExchanges { Context = Globals.Context };
+
+        // Act
+        var exception = Assert.Throws<InvalidOperationException>(() => probe.InvokeManipulateObject(channelMock.Object,
+            new RabbitMqExchangeConfig
+            {
+                Name = "exchange-a",
+                Type = RabbitMqExchangeType.Direct,
+                Durable = true,
+                AutoDelete = false
+            }));
+
+        // Assert
+        Assert.That(exception!.Message, Does.Contain("exchange-a"));
+        Assert.That(exception.Message, Does.Contain("different configuration"));
+        Assert.That(exception.Message, Does.Contain("type=direct"));
     }
 
     [Test]
