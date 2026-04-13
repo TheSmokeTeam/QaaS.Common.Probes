@@ -21,6 +21,9 @@ public abstract class BaseSqlDataBaseTablesTruncateProbeWithGlobalDict
     protected override IReadOnlyList<string> GetConfigurationDefaultsAliasPath()
         => BuildGlobalDictionaryAliasPath("Sql", "Defaults");
 
+    /// <summary>
+    /// Executes the truncate flow after configuration defaults have been resolved from the probe global dictionary.
+    /// </summary>
     public override void Run(IImmutableList<SessionData> sessionDataList, IImmutableList<DataSource> dataSourceList)
     {
         _dbConnection = CreateDbConnection();
@@ -28,6 +31,9 @@ public abstract class BaseSqlDataBaseTablesTruncateProbeWithGlobalDict
             TruncateTable(table);
     }
 
+    /// <summary>
+    /// Executes the truncate command for a single configured table, opening and closing the connection when needed.
+    /// </summary>
     protected virtual void TruncateTable(string tableName)
     {
         using var command = _dbConnection.CreateCommand();
@@ -54,11 +60,20 @@ public abstract class BaseSqlDataBaseTablesTruncateProbeWithGlobalDict
         }
     }
 
+    /// <summary>
+    /// Creates the provider-specific database connection used by this probe.
+    /// </summary>
     protected abstract IDbConnection CreateDbConnection();
 
+    /// <summary>
+    /// Builds the provider-specific TRUNCATE command text for the supplied table identifier.
+    /// </summary>
     protected virtual string BuildTruncateCommandText(string tableName)
         => $"TRUNCATE TABLE {FormatQualifiedIdentifier(tableName)}";
 
+    /// <summary>
+    /// Validates and formats a potentially schema-qualified table identifier by quoting each segment independently.
+    /// </summary>
     protected string FormatQualifiedIdentifier(string qualifiedIdentifier)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(qualifiedIdentifier);
@@ -68,12 +83,18 @@ public abstract class BaseSqlDataBaseTablesTruncateProbeWithGlobalDict
                 .Select(QuoteIdentifier));
     }
 
+    /// <summary>
+    /// Quotes a single identifier segment for the current SQL dialect after validating that it is safe to emit.
+    /// </summary>
     protected virtual string QuoteIdentifier(string identifier)
     {
         ValidateIdentifier(identifier);
         return identifier;
     }
 
+    /// <summary>
+    /// Rejects identifier segments that contain unsupported or unsafe characters before SQL text is generated.
+    /// </summary>
     protected static void ValidateIdentifier(string identifier)
     {
         if (!Regex.IsMatch(identifier, "^[A-Za-z_][A-Za-z0-9_$#]*$"))
@@ -83,6 +104,9 @@ public abstract class BaseSqlDataBaseTablesTruncateProbeWithGlobalDict
         }
     }
 
+    /// <summary>
+    /// Disposes the cached database connection created for the probe run.
+    /// </summary>
     public void Dispose()
     {
         _dbConnection?.Dispose();

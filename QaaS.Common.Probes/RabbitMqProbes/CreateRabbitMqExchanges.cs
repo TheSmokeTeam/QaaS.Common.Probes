@@ -24,6 +24,10 @@ public class CreateRabbitMqExchanges
     protected override IEnumerable<RabbitMqExchangeConfig> GetObjectsToManipulateConfigurations()
         => Configuration.Exchanges!;
 
+    /// <summary>
+    /// Declares the requested exchange and converts broker precondition failures into configuration-mismatch errors that
+    /// include the requested exchange shape.
+    /// </summary>
     protected override void ManipulateObject(IChannel channel, RabbitMqExchangeConfig objectToManipulateConfig)
     {
         var exchangeType = objectToManipulateConfig.Type == RabbitMqExchangeType.ConsistentHash

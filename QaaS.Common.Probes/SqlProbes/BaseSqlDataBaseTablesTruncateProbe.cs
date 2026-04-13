@@ -10,7 +10,7 @@ using QaaS.Framework.SDK.Session.SessionDataObjects;
 namespace QaaS.Common.Probes.SqlProbes;
 
 /// <summary>
-/// Truncates a list of sql tables in a given database
+/// Truncates a list of SQL tables in a given database while validating and formatting qualified identifiers safely.
 /// </summary>
 public abstract class BaseSqlDataBaseTablesTruncateProbe : BaseProbe<SqlDataBaseTablesTruncateProbeConfig>
 {
@@ -24,8 +24,7 @@ public abstract class BaseSqlDataBaseTablesTruncateProbe : BaseProbe<SqlDataBase
     }
 
     /// <summary>
-    /// Common sql table truncation action (If this truncation syntax is not supported in a specific sql database
-    /// this function can be overriden)
+    /// Executes the truncate command for a single configured table, opening and closing the connection when needed.
     /// </summary>
     protected virtual void TruncateTable(string tableName)
     {
@@ -53,11 +52,20 @@ public abstract class BaseSqlDataBaseTablesTruncateProbe : BaseProbe<SqlDataBase
         }
     }
 
+    /// <summary>
+    /// Creates the provider-specific database connection used by this probe.
+    /// </summary>
     protected abstract IDbConnection CreateDbConnection();
 
+    /// <summary>
+    /// Builds the provider-specific TRUNCATE command text for the supplied table identifier.
+    /// </summary>
     protected virtual string BuildTruncateCommandText(string tableName)
         => $"TRUNCATE TABLE {FormatQualifiedIdentifier(tableName)}";
 
+    /// <summary>
+    /// Validates and formats a potentially schema-qualified table identifier by quoting each segment independently.
+    /// </summary>
     protected string FormatQualifiedIdentifier(string qualifiedIdentifier)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(qualifiedIdentifier);
@@ -67,12 +75,18 @@ public abstract class BaseSqlDataBaseTablesTruncateProbe : BaseProbe<SqlDataBase
                 .Select(QuoteIdentifier));
     }
 
+    /// <summary>
+    /// Quotes a single identifier segment for the current SQL dialect after validating that it is safe to emit.
+    /// </summary>
     protected virtual string QuoteIdentifier(string identifier)
     {
         ValidateIdentifier(identifier);
         return identifier;
     }
 
+    /// <summary>
+    /// Rejects identifier segments that contain unsupported or unsafe characters before SQL text is generated.
+    /// </summary>
     protected static void ValidateIdentifier(string identifier)
     {
         if (!Regex.IsMatch(identifier, "^[A-Za-z_][A-Za-z0-9_$#]*$"))
@@ -82,6 +96,9 @@ public abstract class BaseSqlDataBaseTablesTruncateProbe : BaseProbe<SqlDataBase
         }
     }
 
+    /// <summary>
+    /// Disposes the cached database connection created for the probe run.
+    /// </summary>
     public void Dispose()
     {
         _dbConnection?.Dispose();

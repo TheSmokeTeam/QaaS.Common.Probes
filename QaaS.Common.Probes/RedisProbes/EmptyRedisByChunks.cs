@@ -11,6 +11,10 @@ namespace QaaS.Common.Probes.RedisProbes;
 public class EmptyRedisByChunks<TEmptyRedisByChunksProbeConfig> : BaseRedisProbeWithGlobalDict<TEmptyRedisByChunksProbeConfig>
     where TEmptyRedisByChunksProbeConfig : RedisDataBaseBatchProbeConfig, new()
 {
+    /// <summary>
+    /// Scans the Redis database first, collects the keys that match the optional regex filter, and then deletes them in
+    /// configured chunk sizes.
+    /// </summary>
     protected override void RunRedisProbe()
     {
         Context.Logger.LogInformation("Emptying by chunks redis database {RedisDb}...", RedisDb);

@@ -2,6 +2,9 @@ using System.ComponentModel;
 
 namespace QaaS.Common.Probes.ConfigurationObjects.Os;
 
+/// <summary>
+/// Configuration for OpenShift probes that add, update, remove, or fully restore container environment variables.
+/// </summary>
 public record OsChangeEnvVarsConfig : OsUpdatePodsProbeConfig
 {
     [Description("The name of the container we would like to update, if not given - the probe will update all of the " +

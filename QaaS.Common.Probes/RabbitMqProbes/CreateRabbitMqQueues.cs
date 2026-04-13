@@ -23,6 +23,10 @@ public class CreateRabbitMqQueues
 
     protected override IEnumerable<RabbitMqQueueConfig> GetObjectsToManipulateConfigurations() => Configuration.Queues!;
 
+    /// <summary>
+    /// Declares the requested queue and converts broker precondition failures into configuration-mismatch errors that
+    /// point back to the requested queue shape.
+    /// </summary>
     protected override void ManipulateObject(IChannel channel, RabbitMqQueueConfig objectToManipulateConfig)
     {
         try

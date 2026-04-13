@@ -4,6 +4,9 @@ using QaaS.Framework.Protocols.ConfigurationObjects.Elastic;
 
 namespace QaaS.Common.Probes.ConfigurationObjects.Elastic;
 
+/// <summary>
+/// Configuration for deleting Elasticsearch indices selected by regex, with optional global-dictionary fallback and TLS override support.
+/// </summary>
 public record EmptyElasticIndicesConfig : ElasticIndicesRegex, IUseGlobalDictProbeConfiguration,
     IElasticTlsConfiguration
 {

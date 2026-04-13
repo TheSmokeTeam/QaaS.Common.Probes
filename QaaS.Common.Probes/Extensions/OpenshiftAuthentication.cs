@@ -71,7 +71,7 @@ public static class OpenshiftAuthentication
     /// <param name="username">The username to authenticate.</param>
     /// <param name="password">The password of the username to authenticate.</param>
     /// <param name="allowInvalidServerCertificates">Whether TLS certificate validation should be skipped for this cluster connection.</param>
-    /// <returns>The changed <see cref="Kubernetes"/> object.</returns>
+    /// <returns>An authenticated <see cref="Kubernetes"/> client configured for the requested cluster.</returns>
     public static Kubernetes CreateKubernetesClient(string cluster, string username, string password,
         bool allowInvalidServerCertificates = false)
     {
@@ -90,6 +90,9 @@ public static class OpenshiftAuthentication
         return new Kubernetes(k8SClientConfig);
     }
 
+    /// <summary>
+    /// Builds an <see cref="HttpClient"/> for the OpenShift OAuth discovery and authorization calls.
+    /// </summary>
     private static HttpClient CreateHttpClient(bool allowInvalidServerCertificates, bool allowAutoRedirect = true)
     {
         var handler = new HttpClientHandler
@@ -104,6 +107,9 @@ public static class OpenshiftAuthentication
         return new HttpClient(handler);
     }
 
+    /// <summary>
+    /// Extracts the implicit-flow access token from the OpenShift authorization redirect response.
+    /// </summary>
     private static string ExtractAccessTokenFromAuthorizationResponse(HttpResponseMessage authorizationResponse)
     {
         if (!IsRedirectStatusCode(authorizationResponse.StatusCode))
@@ -142,6 +148,9 @@ public static class OpenshiftAuthentication
             $"OpenShift authorization redirect did not contain an access token. Redirect location: {redirectLocation}");
     }
 
+    /// <summary>
+    /// Reads the response body and throws a descriptive exception when the HTTP operation does not succeed.
+    /// </summary>
     private static string ReadSuccessfulResponseContent(HttpResponseMessage responseMessage, string operationDescription)
     {
         var responseContent = ReadResponseContent(responseMessage);
@@ -160,10 +169,16 @@ public static class OpenshiftAuthentication
     private static bool IsRedirectStatusCode(HttpStatusCode statusCode)
         => (int)statusCode is >= 300 and < 400;
 
+    /// <summary>
+    /// Attempts to read a parameter from either the query string or fragment of a redirect URI.
+    /// </summary>
     private static bool TryReadUriParameter(Uri uri, string parameterName, out string value)
         => TryReadFormEncodedParameter(uri.Fragment, parameterName, out value)
            || TryReadFormEncodedParameter(uri.Query, parameterName, out value);
 
+    /// <summary>
+    /// Attempts to read a single form-url-encoded parameter from a query-string or fragment payload.
+    /// </summary>
     private static bool TryReadFormEncodedParameter(string valueSource, string parameterName, out string value)
     {
         var trimmedValueSource = valueSource.TrimStart('#', '?');

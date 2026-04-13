@@ -5,11 +5,14 @@ using QaaS.Common.Probes.ConfigurationObjects.S3;
 namespace QaaS.Common.Probes.S3Probes;
 
 /// <summary>
-/// Probe to empty a s3 bucket according to a certain prefix
+/// Deletes objects from the configured S3 bucket, optionally constrained to a prefix, while treating a missing bucket as a no-op.
 /// </summary>
 /// <qaas-docs group="Databases" subgroup="S3" />
 public class EmptyS3Bucket : BaseS3ProbeWithGlobalDict<EmptyS3BucketConfig>
 {
+    /// <summary>
+    /// Removes the matching objects from the configured bucket without deleting the bucket itself.
+    /// </summary>
     protected override void RunS3Probe()
     {
         try

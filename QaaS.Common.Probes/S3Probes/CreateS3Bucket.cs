@@ -11,6 +11,9 @@ namespace QaaS.Common.Probes.S3Probes;
 /// <qaas-docs group="Databases" subgroup="S3" />
 public class CreateS3Bucket : BaseS3ProbeWithGlobalDict<CreateS3BucketConfig>
 {
+    /// <summary>
+    /// Creates the configured bucket and treats "already owned by you" as a successful no-op so repeated runs stay idempotent.
+    /// </summary>
     protected override void RunS3Probe()
     {
         try

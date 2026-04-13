@@ -3,6 +3,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace QaaS.Common.Probes.ConfigurationObjects.Os;
 
+/// <summary>
+/// Connection settings required by probes that authenticate against an OpenShift cluster.
+/// </summary>
 public record Openshift
 {
     [Required, Description("The openshift cluster api")]

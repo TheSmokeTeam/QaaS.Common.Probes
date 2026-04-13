@@ -5,11 +5,14 @@ using QaaS.Common.Probes.ConfigurationObjects.S3;
 namespace QaaS.Common.Probes.S3Probes;
 
 /// <summary>
-/// Probe to delete a s3 bucket
+/// Empties the configured S3 bucket and deletes it, treating a missing bucket as an already-satisfied state.
 /// </summary>
 /// <qaas-docs group="Databases" subgroup="S3" />
 public class DeleteS3Bucket : BaseS3ProbeWithGlobalDict<DeleteS3BucketConfig>
 {
+    /// <summary>
+    /// Deletes all objects from the configured bucket before deleting the bucket itself.
+    /// </summary>
     protected override void RunS3Probe()
     {
         try
