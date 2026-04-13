@@ -16,4 +16,8 @@ public record Openshift
 
     [Required, Description("The openshift namespace the application is at")]
     public string? Namespace { get; set; }
+
+    [Description("Allow invalid TLS certificates when connecting to the OpenShift API."),
+     DefaultValue(false)]
+    public bool AllowInvalidServerCertificates { get; set; }
 }

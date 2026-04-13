@@ -11,12 +11,16 @@ namespace QaaS.Common.Probes.Tests;
 public class EmptyRedisByChunksTests
 {
     [Test, TestCase(10, 100), TestCase(20, 100), TestCase(20, 200)]
-    public void TestRunProbe_CallFunctionWithProbeWithXBatchSizeAndYKeys_KeyDeleteFunctionIsCalledYDividedByXTimes
+    public void TestRunProbe_CallFunctionWithProbeWithXBatchSizeAndYKeys_KeyDeleteFunctionIsCalledAfterScanInDeleteChunks
         (int batchSize, int keysInRedis)
     {
         // Arrange
         var redisDataBaseMock = new Mock<IDatabase>();
         var callCount = 0;
+        var scanCompleted = false;
+        var deletedKeys = 0;
+        var expectedKeysToDelete = keysInRedis / batchSize + 1;
+        var expectedDeleteCalls = (int)Math.Ceiling(expectedKeysToDelete / (double)batchSize);
 
         redisDataBaseMock.Setup(r =>
                 r.Execute(It.IsAny<string>(), It.IsAny<string>(), "MATCH", "*", "COUNT",
@@ -31,11 +35,18 @@ public class EmptyRedisByChunksTests
                     ]);
                 }
 
+                scanCompleted = true;
                 return RedisResult.Create([
                     RedisResult.Create(0L), RedisResult.Create(["last call"])
                 ]);
             });
-        redisDataBaseMock.SetupSequence(r => r.KeyDelete(It.IsAny<RedisKey[]>(), It.IsAny<CommandFlags>()));
+        redisDataBaseMock.Setup(r => r.KeyDelete(It.IsAny<RedisKey[]>(), It.IsAny<CommandFlags>()))
+            .Callback<RedisKey[], CommandFlags>((keys, _) =>
+            {
+                Assert.That(scanCompleted, Is.True);
+                deletedKeys += keys.Length;
+            })
+            .Returns<RedisKey[], CommandFlags>((keys, _) => keys.LongLength);
         var probeConfig = new RedisDataBaseBatchProbeConfig()
         {
             BatchSize = batchSize
@@ -61,7 +72,8 @@ public class EmptyRedisByChunksTests
 
         // Assert
         redisDataBaseMock.Verify(m => m.KeyDelete(It.IsAny<RedisKey[]>(), It.IsAny<CommandFlags>()),
-            Times.Exactly(keysInRedis / batchSize + 1));
+            Times.Exactly(expectedDeleteCalls));
+        Assert.That(deletedKeys, Is.EqualTo(expectedKeysToDelete));
     }
 
     [Test]

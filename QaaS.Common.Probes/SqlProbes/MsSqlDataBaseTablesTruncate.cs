@@ -11,4 +11,10 @@ public class MsSqlDataBaseTablesTruncate : BaseSqlDataBaseTablesTruncateProbeWit
 {
     protected override IDbConnection CreateDbConnection()
         => new SqlConnection(Configuration.ConnectionString);
+
+    protected override string QuoteIdentifier(string identifier)
+    {
+        ValidateIdentifier(identifier);
+        return $"[{identifier}]";
+    }
 }

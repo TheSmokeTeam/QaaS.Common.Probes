@@ -41,9 +41,9 @@ public class BaseSqlDataBaseTablesTruncateProbeTests
     {
         yield return new TestCaseData(new SqlDataBaseTablesTruncateProbeConfig { TableNames = [] }, Times.Never())
             .SetName("Truncate0Tables");
-        yield return new TestCaseData(new SqlDataBaseTablesTruncateProbeConfig { TableNames = ["1"] }, Times.Once())
+        yield return new TestCaseData(new SqlDataBaseTablesTruncateProbeConfig { TableNames = ["table1"] }, Times.Once())
             .SetName("TruncateOneTable");
-        yield return new TestCaseData(new SqlDataBaseTablesTruncateProbeConfig { TableNames = ["1", "2", "3"] },
+        yield return new TestCaseData(new SqlDataBaseTablesTruncateProbeConfig { TableNames = ["table1", "table2", "table3"] },
             Times.Exactly(3)).SetName("TruncateMultipleTables");
     }
 
@@ -92,7 +92,7 @@ public class BaseSqlDataBaseTablesTruncateProbeTests
         probe.Run(new List<SessionData>().ToImmutableList(), new List<DataSource>().ToImmutableList());
 
         // Assert
-        commandMock.VerifySet(mock => mock.CommandText = "Truncate Table users", Times.Once);
+        commandMock.VerifySet(mock => mock.CommandText = "TRUNCATE TABLE users", Times.Once);
         commandMock.VerifySet(mock => mock.CommandTimeout = commandTimeout, Times.Once);
         commandMock.Verify(mock => mock.ExecuteNonQuery(), Times.Once);
         connectionMock.Verify(mock => mock.Open(), Times.Once);

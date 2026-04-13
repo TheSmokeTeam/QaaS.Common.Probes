@@ -13,4 +13,7 @@ public record OsChangeEnvVarsConfig : OsUpdatePodsProbeConfig
 
     [Description("The environment variables to remove")]
     public List<string> EnvVarsToRemove { get; set; } = [];
+
+    [Description("Optional exact environment snapshot keyed by container name. When present, the probe restores each listed container to the provided environment instead of applying the broad update/remove rules.")]
+    public Dictionary<string, Dictionary<string, string?>>? ContainerEnvVarsToUpdate { get; set; }
 }

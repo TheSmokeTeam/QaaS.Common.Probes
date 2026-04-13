@@ -28,9 +28,17 @@ public class OsChangeStatefulSetEnvVars :
 
     protected override V1StatefulSet UpdateReplicaSet(V1StatefulSet replicaSet)
     {
-        ReplicaSetUpdateExtensions.ChangeReplicaSetEnvVars(
-            replicaSet.Spec.Template.Spec.Containers, Configuration.EnvVarsToUpdate, Configuration.EnvVarsToRemove,
-            Configuration.ContainerName);
+        if (Configuration.ContainerEnvVarsToUpdate is { Count: > 0 })
+        {
+            ReplicaSetUpdateExtensions.RestoreReplicaSetEnvVars(replicaSet.Spec.Template.Spec.Containers,
+                Configuration.ContainerEnvVarsToUpdate);
+        }
+        else
+        {
+            ReplicaSetUpdateExtensions.ChangeReplicaSetEnvVars(
+                replicaSet.Spec.Template.Spec.Containers, Configuration.EnvVarsToUpdate, Configuration.EnvVarsToRemove,
+                Configuration.ContainerName);
+        }
         replicaSet.Spec.Template.TouchReplicaSetTemplate();
 
         return Kubernetes.ReplaceNamespacedStatefulSet(replicaSet, Configuration.ReplicaSetName,
@@ -51,9 +59,21 @@ public class OsChangeStatefulSetEnvVars :
         var targetContainers = string.IsNullOrWhiteSpace(containerName)
             ? containers.ToArray()
             : containers.Where(container => container.Name == containerName).ToArray();
-        if (targetContainers.Length != 1)
+        if (targetContainers.Length == 0)
         {
             return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(containerName) && targetContainers.Length > 1)
+        {
+            return new
+            {
+                ContainerEnvVarsToUpdate = targetContainers.ToDictionary(container => container.Name,
+                    container => (container.Env ?? [])
+                        .ToDictionary(environmentVariable => environmentVariable.Name,
+                            environmentVariable => environmentVariable.Value)),
+                EnvVarsToRemove = Array.Empty<string>()
+            };
         }
 
         var targetContainer = targetContainers[0];

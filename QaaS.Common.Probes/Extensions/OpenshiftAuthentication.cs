@@ -12,34 +12,21 @@ namespace QaaS.Common.Probes.Extensions;
 /// </summary>
 public static class OpenshiftAuthentication
 {
-    private static readonly HttpClientHandler DiscoveryHttpClientHandler = new()
-    {
-        ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-    };
-
-    private static readonly HttpClientHandler AuthorizationHttpClientHandler = new()
-    {
-        AllowAutoRedirect = false,
-        ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-    };
-
-    private static readonly HttpClient DiscoveryHttpClient = new(DiscoveryHttpClientHandler);
-
-    private static readonly HttpClient AuthorizationHttpClient = new(AuthorizationHttpClientHandler);
-
     /// <summary>
     /// Get the authorization endpoint of the Openshift cluster.
     /// This endpoint leads to the cluster's required url through which the access token of a user is generated.
     /// </summary>
     /// <param name="host">The url of the openshift cluster</param>
+    /// <param name="allowInvalidServerCertificates">Whether TLS certificate validation should be skipped while discovering the OAuth endpoint.</param>
     /// <returns>The auth url.</returns>
-    private static string DiscoverAuthorizationEndpoint(string host)
+    private static string DiscoverAuthorizationEndpoint(string host, bool allowInvalidServerCertificates)
     {
         if (host[^1] == '/')
             host = host.Remove(host.Length - 1);
 
         var url = $"{host}/.well-known/oauth-authorization-server";
-        using var response = DiscoveryHttpClient.GetAsync(url).GetAwaiter().GetResult();
+        using var discoveryHttpClient = CreateHttpClient(allowInvalidServerCertificates);
+        using var response = discoveryHttpClient.GetAsync(url).GetAwaiter().GetResult();
         var oauthInfo = ReadSuccessfulResponseContent(response, $"OpenShift OAuth discovery request to {url}");
         var jsonAuthInfo = JObject.Load(new JsonTextReader(new StringReader(oauthInfo)));
         return jsonAuthInfo["authorization_endpoint"]?.ToString()
@@ -53,10 +40,11 @@ public static class OpenshiftAuthentication
     /// <param name="host">The url of the openshift cluster</param>
     /// <param name="username">The username to authenticate.</param>
     /// <param name="password">The password of the username to authenticate.</param>
+    /// <param name="allowInvalidServerCertificates">Whether TLS certificate validation should be skipped for the discovery and authorization HTTP calls.</param>
     /// <returns>An access token to the Openshift cluster.</returns>
-    private static string GetToken(string host, string username, string password)
+    private static string GetToken(string host, string username, string password, bool allowInvalidServerCertificates)
     {
-        var authorizationEndpoint = DiscoverAuthorizationEndpoint(host);
+        var authorizationEndpoint = DiscoverAuthorizationEndpoint(host, allowInvalidServerCertificates);
         var authUrl =
             $"{authorizationEndpoint}?response_type=token&client_id=openshift-challenging-client";
 
@@ -67,7 +55,8 @@ public static class OpenshiftAuthentication
             new AuthenticationHeaderValue("Basic", Convert.ToBase64String(authBytes));
         httpRequest.Headers.Add("X-Csrf-Token", "1");
 
-        using var authorizationResponse = AuthorizationHttpClient.SendAsync(httpRequest).GetAwaiter().GetResult();
+        using var authorizationHttpClient = CreateHttpClient(allowInvalidServerCertificates, allowAutoRedirect: false);
+        using var authorizationResponse = authorizationHttpClient.SendAsync(httpRequest).GetAwaiter().GetResult();
         return ExtractAccessTokenFromAuthorizationResponse(authorizationResponse);
     }
 
@@ -81,21 +70,38 @@ public static class OpenshiftAuthentication
     /// <param name="cluster">The cluster to authenticate to</param>
     /// <param name="username">The username to authenticate.</param>
     /// <param name="password">The password of the username to authenticate.</param>
+    /// <param name="allowInvalidServerCertificates">Whether TLS certificate validation should be skipped for this cluster connection.</param>
     /// <returns>The changed <see cref="Kubernetes"/> object.</returns>
-    public static Kubernetes CreateKubernetesClient(string cluster, string username, string password)
+    public static Kubernetes CreateKubernetesClient(string cluster, string username, string password,
+        bool allowInvalidServerCertificates = false)
     {
         if (!cluster.StartsWith("http"))
             cluster = $"https://{cluster}";
 
         var k8SClientConfig = new KubernetesClientConfiguration
-            { Host = cluster, SkipTlsVerify = true };
+            { Host = cluster, SkipTlsVerify = allowInvalidServerCertificates };
         var k8SClientWithNoToken = new Kubernetes(k8SClientConfig);
-        var accessToken = GetToken(k8SClientWithNoToken.BaseUri.AbsoluteUri, username, password);
+        var accessToken = GetToken(k8SClientWithNoToken.BaseUri.AbsoluteUri, username, password,
+            allowInvalidServerCertificates);
         k8SClientConfig = new KubernetesClientConfiguration()
         {
-            Host = cluster, SkipTlsVerify = true, AccessToken = accessToken
+            Host = cluster, SkipTlsVerify = allowInvalidServerCertificates, AccessToken = accessToken
         };
         return new Kubernetes(k8SClientConfig);
+    }
+
+    private static HttpClient CreateHttpClient(bool allowInvalidServerCertificates, bool allowAutoRedirect = true)
+    {
+        var handler = new HttpClientHandler
+        {
+            AllowAutoRedirect = allowAutoRedirect
+        };
+        if (allowInvalidServerCertificates)
+        {
+            handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
+        }
+
+        return new HttpClient(handler);
     }
 
     private static string ExtractAccessTokenFromAuthorizationResponse(HttpResponseMessage authorizationResponse)

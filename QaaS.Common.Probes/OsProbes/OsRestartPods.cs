@@ -34,7 +34,11 @@ public class OsRestartPods : BaseOsProbe<OsRestartPodsConfig>
             }
         }
 
-        var totalPodCount = podsList.Sum(item => item.Items.Count);
+        var podsToRestart = podsList.SelectMany(pods => pods.Items)
+            .GroupBy(pod => $"{pod.Namespace()}/{pod.Name()}", StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToList();
+        var totalPodCount = podsToRestart.Count;
         Context.Logger.LogInformation("Found {NumberOfPods} pods for given labels {GivenLabels}",
             totalPodCount, string.Join(", ", Configuration.ApplicationLabels!));
 
@@ -48,7 +52,7 @@ public class OsRestartPods : BaseOsProbe<OsRestartPodsConfig>
         }
 
         Context.Logger.LogInformation("Now Deleting pods...");
-        foreach (var pod in podsList.SelectMany(pods => pods.Items))
+        foreach (var pod in podsToRestart)
         {
             try
             {

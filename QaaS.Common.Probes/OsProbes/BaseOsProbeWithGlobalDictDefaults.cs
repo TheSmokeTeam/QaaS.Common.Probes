@@ -23,7 +23,8 @@ public abstract class BaseOsProbeWithGlobalDict<TOsProbeConfig>
     protected virtual Kubernetes CreateConnection()
     {
         var k8SClient = OpenshiftAuthentication.CreateKubernetesClient(Configuration.Openshift!.Cluster!,
-            Configuration.Openshift.Username!, Configuration.Openshift.Password!);
+            Configuration.Openshift.Username!, Configuration.Openshift.Password!,
+            Configuration.Openshift.AllowInvalidServerCertificates);
         return k8SClient;
     }
 

@@ -46,9 +46,11 @@ public class RabbitMqBaseProbeTests
         // Assert
         var connectionFactory = factory as ConnectionFactory;
         Assert.That(connectionFactory, Is.Not.Null);
-        Assert.That(probe.ConnectionString, Is.EqualTo("amqp://user:pass@rabbit-host:5678"));
-        Assert.That(connectionFactory!.Uri.Host, Is.EqualTo("rabbit-host"));
-        Assert.That(connectionFactory.Uri.Port, Is.EqualTo(5678));
+        Assert.That(probe.ConnectionString, Is.EqualTo("amqp://rabbit-host:5678 (vhost: vhost)"));
+        Assert.That(connectionFactory!.HostName, Is.EqualTo("rabbit-host"));
+        Assert.That(connectionFactory.Port, Is.EqualTo(5678));
+        Assert.That(connectionFactory.UserName, Is.EqualTo("user"));
+        Assert.That(connectionFactory.Password, Is.EqualTo("pass"));
         Assert.That(connectionFactory.VirtualHost, Is.EqualTo("vhost"));
     }
 }

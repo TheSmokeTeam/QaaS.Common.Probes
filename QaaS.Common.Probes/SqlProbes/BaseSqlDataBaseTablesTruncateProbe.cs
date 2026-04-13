@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Data;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using QaaS.Common.Probes.ConfigurationObjects.Sql;
 using QaaS.Framework.SDK.DataSourceObjects;
@@ -28,22 +29,61 @@ public abstract class BaseSqlDataBaseTablesTruncateProbe : BaseProbe<SqlDataBase
     /// </summary>
     protected virtual void TruncateTable(string tableName)
     {
-        var command = _dbConnection.CreateCommand();
-        command.CommandText = $"Truncate Table {tableName}";
+        using var command = _dbConnection.CreateCommand();
+        command.CommandText = BuildTruncateCommandText(tableName);
         command.CommandTimeout = Configuration.CommandTimeoutSeconds;
 
-        if (_dbConnection.State == ConnectionState.Closed)
+        var shouldCloseConnection = _dbConnection.State == ConnectionState.Closed;
+        if (shouldCloseConnection)
+        {
             _dbConnection.Open();
-        command.ExecuteNonQuery();
-        Context.Logger.LogInformation("Truncated table {TableName}", tableName);
-        if (_dbConnection.State != ConnectionState.Closed)
-            _dbConnection.Close();
+        }
+
+        try
+        {
+            command.ExecuteNonQuery();
+            Context.Logger.LogInformation("Truncated table {TableName}", tableName);
+        }
+        finally
+        {
+            if (shouldCloseConnection && _dbConnection.State != ConnectionState.Closed)
+            {
+                _dbConnection.Close();
+            }
+        }
     }
 
     protected abstract IDbConnection CreateDbConnection();
 
+    protected virtual string BuildTruncateCommandText(string tableName)
+        => $"TRUNCATE TABLE {FormatQualifiedIdentifier(tableName)}";
+
+    protected string FormatQualifiedIdentifier(string qualifiedIdentifier)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(qualifiedIdentifier);
+
+        return string.Join(".",
+            qualifiedIdentifier.Split('.', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .Select(QuoteIdentifier));
+    }
+
+    protected virtual string QuoteIdentifier(string identifier)
+    {
+        ValidateIdentifier(identifier);
+        return identifier;
+    }
+
+    protected static void ValidateIdentifier(string identifier)
+    {
+        if (!Regex.IsMatch(identifier, "^[A-Za-z_][A-Za-z0-9_$#]*$"))
+        {
+            throw new InvalidOperationException(
+                $"Table identifier '{identifier}' contains unsupported or unsafe characters.");
+        }
+    }
+
     public void Dispose()
     {
-        _dbConnection.Dispose();
+        _dbConnection?.Dispose();
     }
 }

@@ -11,4 +11,13 @@ public class PostgreSqlDataBaseTablesTruncate : BaseSqlDataBaseTablesTruncatePro
 {
     protected override IDbConnection CreateDbConnection()
         => new NpgsqlConnection(Configuration.ConnectionString);
+
+    protected override string BuildTruncateCommandText(string tableName)
+        => $"TRUNCATE TABLE {FormatQualifiedIdentifier(tableName)} RESTART IDENTITY CASCADE";
+
+    protected override string QuoteIdentifier(string identifier)
+    {
+        ValidateIdentifier(identifier);
+        return $"\"{identifier}\"";
+    }
 }
