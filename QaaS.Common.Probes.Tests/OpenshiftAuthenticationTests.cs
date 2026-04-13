@@ -17,8 +17,6 @@ public class OpenshiftAuthenticationTests
         {
             await HandleOauthDiscoveryAsync(listener, port);
             await HandleAuthorizationAsync(listener, port);
-            await HandleAuthorizationRedirectAsync(listener);
-            await HandleTokenExchangeAsync(listener);
         });
 
         var kubernetesClient = OpenshiftAuthentication.CreateKubernetesClient(
@@ -29,6 +27,52 @@ public class OpenshiftAuthenticationTests
         serverTask.GetAwaiter().GetResult();
 
         Assert.That(kubernetesClient.BaseUri.AbsoluteUri, Is.EqualTo($"http://127.0.0.1:{port}/"));
+    }
+
+    [Test]
+    public void CreateKubernetesClient_WhenOauthDiscoveryFails_ShouldThrowHelpfulException()
+    {
+        using var listener = CreateStartedListener(out _);
+
+        var serverTask = Task.Run(async () =>
+        {
+            var context = await listener.GetContextAsync();
+            context.Response.StatusCode = 500;
+            await context.Response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes("discovery failed"));
+            context.Response.Close();
+        });
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            OpenshiftAuthentication.CreateKubernetesClient(listener.Prefixes.Single().TrimEnd('/'), "user", "pass"));
+
+        serverTask.GetAwaiter().GetResult();
+
+        Assert.That(exception!.Message, Does.Contain("OpenShift OAuth discovery request"));
+        Assert.That(exception.Message, Does.Contain("500"));
+    }
+
+    [Test]
+    public void CreateKubernetesClient_WhenAuthorizationFails_ShouldThrowHelpfulException()
+    {
+        using var listener = CreateStartedListener(out var port);
+
+        var serverTask = Task.Run(async () =>
+        {
+            await HandleOauthDiscoveryAsync(listener, port);
+
+            var context = await listener.GetContextAsync();
+            context.Response.StatusCode = 401;
+            await context.Response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes("unauthorized"));
+            context.Response.Close();
+        });
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            OpenshiftAuthentication.CreateKubernetesClient($"http://127.0.0.1:{port}", "user", "pass"));
+
+        serverTask.GetAwaiter().GetResult();
+
+        Assert.That(exception!.Message, Does.Contain("OpenShift authorization request failed"));
+        Assert.That(exception.Message, Does.Contain("401"));
     }
 
     private static async Task HandleOauthDiscoveryAsync(HttpListener listener, int port)
@@ -47,25 +91,10 @@ public class OpenshiftAuthenticationTests
     {
         var context = await listener.GetContextAsync();
         context.Response.StatusCode = 302;
-        context.Response.RedirectLocation = $"http://127.0.0.1:{port}/callback?code=test-code&state=1";
+        context.Response.RedirectLocation =
+            $"http://127.0.0.1:{port}/callback#access_token=token-value&token_type=Bearer&state=1";
         context.Response.Close();
         await Task.CompletedTask;
-    }
-
-    private static async Task HandleAuthorizationRedirectAsync(HttpListener listener)
-    {
-        var context = await listener.GetContextAsync();
-        context.Response.StatusCode = 200;
-        await context.Response.OutputStream.WriteAsync(Array.Empty<byte>());
-        context.Response.Close();
-    }
-
-    private static async Task HandleTokenExchangeAsync(HttpListener listener)
-    {
-        var context = await listener.GetContextAsync();
-        context.Response.StatusCode = 200;
-        await context.Response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes("{\"access_token\":\"token-value\"}"));
-        context.Response.Close();
     }
 
     private static HttpListener CreateStartedListener(out int port)

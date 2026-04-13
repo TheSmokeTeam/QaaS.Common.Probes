@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using QaaS.Common.Probes.ConfigurationObjects.RabbitMq;
 using QaaS.Common.Probes.Infrastructure.ProbeGlobalDict;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Exceptions;
 
 namespace QaaS.Common.Probes.RabbitMqProbes;
 
@@ -28,11 +29,31 @@ public class CreateRabbitMqExchanges
         var exchangeType = objectToManipulateConfig.Type == RabbitMqExchangeType.ConsistentHash
             ? "x-consistent-hash"
             : objectToManipulateConfig.Type.ToString().ToLower();
-        channel.ExchangeDeclareAsync(objectToManipulateConfig.Name!, exchangeType, objectToManipulateConfig.Durable,
-            objectToManipulateConfig.AutoDelete, objectToManipulateConfig.Arguments).GetAwaiter().GetResult();
+        try
+        {
+            channel.ExchangeDeclareAsync(objectToManipulateConfig.Name!, exchangeType, objectToManipulateConfig.Durable,
+                objectToManipulateConfig.AutoDelete, objectToManipulateConfig.Arguments).GetAwaiter().GetResult();
+        }
+        catch (OperationInterruptedException exception)
+            when (RabbitMqDeclarationValidation.IsConfigurationMismatch(exception))
+        {
+            throw RabbitMqDeclarationValidation.CreateConfigurationMismatchException("exchange",
+                objectToManipulateConfig.Name!, DescribeRequestedExchangeConfiguration(objectToManipulateConfig),
+                exception);
+        }
+        catch (AlreadyClosedException exception)
+            when (RabbitMqDeclarationValidation.IsConfigurationMismatch(exception))
+        {
+            throw RabbitMqDeclarationValidation.CreateConfigurationMismatchException("exchange",
+                objectToManipulateConfig.Name!, DescribeRequestedExchangeConfiguration(objectToManipulateConfig),
+                exception);
+        }
 
         Context.Logger.LogDebug(
             "Created exchange {ExchangeName} of type {ExchangeType} in the rabbitmq {RabbitmqConnectionString}",
             objectToManipulateConfig.Name, exchangeType, RabbitmqConnectionString);
     }
+
+    private static string DescribeRequestedExchangeConfiguration(RabbitMqExchangeConfig exchangeConfig)
+        => $"type={(exchangeConfig.Type == RabbitMqExchangeType.ConsistentHash ? "x-consistent-hash" : exchangeConfig.Type.ToString().ToLower())}, durable={exchangeConfig.Durable}, autoDelete={exchangeConfig.AutoDelete}, arguments={RabbitMqDeclarationValidation.FormatArguments(exchangeConfig.Arguments)}";
 }

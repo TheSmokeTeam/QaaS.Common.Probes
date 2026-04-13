@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using QaaS.Common.Probes.ConfigurationObjects.RabbitMq;
 using QaaS.Common.Probes.Infrastructure.ProbeGlobalDict;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Exceptions;
 
 namespace QaaS.Common.Probes.RabbitMqProbes;
 
@@ -24,11 +25,30 @@ public class CreateRabbitMqQueues
 
     protected override void ManipulateObject(IChannel channel, RabbitMqQueueConfig objectToManipulateConfig)
     {
-        channel.QueueDeclareAsync(objectToManipulateConfig.Name!, objectToManipulateConfig.Durable,
-                objectToManipulateConfig.Exclusive, objectToManipulateConfig.AutoDelete,
-                objectToManipulateConfig.Arguments)
-            .GetAwaiter().GetResult();
+        try
+        {
+            channel.QueueDeclareAsync(objectToManipulateConfig.Name!, objectToManipulateConfig.Durable,
+                    objectToManipulateConfig.Exclusive, objectToManipulateConfig.AutoDelete,
+                    objectToManipulateConfig.Arguments)
+                .GetAwaiter().GetResult();
+        }
+        catch (OperationInterruptedException exception)
+            when (RabbitMqDeclarationValidation.IsConfigurationMismatch(exception))
+        {
+            throw RabbitMqDeclarationValidation.CreateConfigurationMismatchException("queue",
+                objectToManipulateConfig.Name!, DescribeRequestedQueueConfiguration(objectToManipulateConfig), exception);
+        }
+        catch (AlreadyClosedException exception)
+            when (RabbitMqDeclarationValidation.IsConfigurationMismatch(exception))
+        {
+            throw RabbitMqDeclarationValidation.CreateConfigurationMismatchException("queue",
+                objectToManipulateConfig.Name!, DescribeRequestedQueueConfiguration(objectToManipulateConfig), exception);
+        }
+
         Context.Logger.LogDebug("Created queue {QueueName} in the rabbitmq {RabbitmqConnectionString}",
             objectToManipulateConfig.Name, RabbitmqConnectionString);
     }
+
+    private static string DescribeRequestedQueueConfiguration(RabbitMqQueueConfig queueConfig)
+        => $"durable={queueConfig.Durable}, exclusive={queueConfig.Exclusive}, autoDelete={queueConfig.AutoDelete}, arguments={RabbitMqDeclarationValidation.FormatArguments(queueConfig.Arguments)}";
 }
