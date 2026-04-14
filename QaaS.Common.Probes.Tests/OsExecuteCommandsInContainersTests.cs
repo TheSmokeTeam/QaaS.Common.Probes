@@ -209,6 +209,25 @@ public class OsExecuteCommandsInContainersTests
         Assert.That(result, Is.EqualTo("hello\n"));
     }
 
+    [Test]
+    public void TryReadStreamOutput_WhenStreamFactoryBlocks_ReturnsEmptyStringAfterTimeout()
+    {
+        var method = typeof(OsExecuteCommandsInContainers)
+            .GetMethod("TryReadStreamOutput", BindingFlags.NonPublic | BindingFlags.Static, null,
+                [typeof(Func<Stream>), typeof(TimeSpan), typeof(TimeSpan)], null)!;
+        var blockedFactory = new Func<Stream>(() =>
+        {
+            using var neverCompletes = new ManualResetEventSlim(false);
+            neverCompletes.Wait();
+            return Stream.Null;
+        });
+
+        var result = (string)method.Invoke(null,
+            [blockedFactory, TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(10)])!;
+
+        Assert.That(result, Is.Empty);
+    }
+
     private static Openshift CreateOpenshiftConfig()
     {
         return new Openshift

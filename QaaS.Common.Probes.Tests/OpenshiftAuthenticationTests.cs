@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using NUnit.Framework;
+using QaaS.Common.Probes.ConfigurationObjects.Os;
 using QaaS.Common.Probes.Extensions;
 
 namespace QaaS.Common.Probes.Tests;
@@ -8,6 +9,14 @@ namespace QaaS.Common.Probes.Tests;
 [TestFixture]
 public class OpenshiftAuthenticationTests
 {
+    [Test]
+    public void OpenshiftConfiguration_ShouldAllowInvalidServerCertificatesByDefault()
+    {
+        var configuration = new Openshift();
+
+        Assert.That(configuration.AllowInvalidServerCertificates, Is.True);
+    }
+
     [Test]
     public void CreateKubernetesClient_WhenOauthEndpointsRespond_ReturnsAuthenticatedClient()
     {

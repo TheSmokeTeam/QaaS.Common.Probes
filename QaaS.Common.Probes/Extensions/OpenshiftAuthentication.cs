@@ -73,7 +73,7 @@ public static class OpenshiftAuthentication
     /// <param name="allowInvalidServerCertificates">Whether TLS certificate validation should be skipped for this cluster connection.</param>
     /// <returns>An authenticated <see cref="Kubernetes"/> client configured for the requested cluster.</returns>
     public static Kubernetes CreateKubernetesClient(string cluster, string username, string password,
-        bool allowInvalidServerCertificates = false)
+        bool allowInvalidServerCertificates = true)
     {
         if (!cluster.StartsWith("http"))
             cluster = $"https://{cluster}";

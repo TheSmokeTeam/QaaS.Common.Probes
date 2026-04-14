@@ -62,7 +62,10 @@ public class OsExecuteCommandsInContainers : BaseOsProbe<OsExecuteCommandsInCont
 
         using var stream = demux.GetStream(1, 1);
         var standardOutput = ReadAvailableOutput(stream);
-        var executionError = TryReadStreamOutput(demux, 3, 3);
+        // The Kubernetes exec status/error channel is optional and some clusters do not materialize it for
+        // successful commands. Reading it on a bounded task keeps live exec probes from hanging indefinitely
+        // when the channel never becomes readable.
+        var executionError = TryReadStreamOutput(demux, 3, 3, OutputReadIdleTimeout);
         if (!string.IsNullOrWhiteSpace(executionError))
         {
             throw new InvalidOperationException(
@@ -104,12 +107,24 @@ public class OsExecuteCommandsInContainers : BaseOsProbe<OsExecuteCommandsInCont
         return builder.ToString();
     }
 
-    private static string TryReadStreamOutput(StreamDemuxer demuxer, byte? index, byte? streamType)
+    private static string TryReadStreamOutput(StreamDemuxer demuxer, byte? index, byte? streamType,
+        TimeSpan streamReadTimeout)
+        => TryReadStreamOutput(() => demuxer.GetStream(index, streamType), streamReadTimeout, OutputReadIdleTimeout);
+
+    private static string TryReadStreamOutput(Func<Stream> streamFactory, TimeSpan streamReadTimeout,
+        TimeSpan idleTimeout)
     {
         try
         {
-            using var stream = demuxer.GetStream(index, streamType);
-            return ReadAvailableOutput(stream);
+            var readTask = Task.Run(() =>
+            {
+                using var stream = streamFactory();
+                return ReadAvailableOutput(stream, idleTimeout);
+            });
+
+            return readTask.Wait(streamReadTimeout)
+                ? readTask.Result
+                : string.Empty;
         }
         catch
         {
