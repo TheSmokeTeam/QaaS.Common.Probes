@@ -12,52 +12,6 @@ namespace QaaS.Common.Probes.Tests;
 [TestFixture]
 public class OsExecuteCommandsInContainersTests
 {
-    private sealed class NonTerminatingStream(byte[] initialPayload) : Stream
-    {
-        private readonly MemoryStream _memoryStream = new(initialPayload);
-
-        public override bool CanRead => true;
-        public override bool CanSeek => false;
-        public override bool CanWrite => false;
-        public override long Length => _memoryStream.Length;
-        public override long Position { get => _memoryStream.Position; set => throw new NotSupportedException(); }
-
-        public override void Flush()
-        {
-        }
-
-        public override int Read(byte[] buffer, int offset, int count)
-        {
-            throw new NotSupportedException();
-        }
-
-        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
-        {
-            if (_memoryStream.Position < _memoryStream.Length)
-            {
-                return await _memoryStream.ReadAsync(buffer, cancellationToken);
-            }
-
-            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
-            return 0;
-        }
-
-        public override long Seek(long offset, SeekOrigin origin)
-        {
-            throw new NotSupportedException();
-        }
-
-        public override void SetLength(long value)
-        {
-            throw new NotSupportedException();
-        }
-
-        public override void Write(byte[] buffer, int offset, int count)
-        {
-            throw new NotSupportedException();
-        }
-    }
-
     private sealed class TestableOsExecuteCommandsInContainers : OsExecuteCommandsInContainers
     {
         public List<(string PodName, string ContainerName)> Executions { get; } = [];
@@ -197,35 +151,26 @@ public class OsExecuteCommandsInContainersTests
     }
 
     [Test]
-    public void ReadAvailableOutput_WhenStreamNeverCloses_ReturnsBufferedContentAfterIdleTimeout()
+    public void GetExecutionError_WhenStatusPayloadIsSuccess_ReturnsEmpty()
     {
         var method = typeof(OsExecuteCommandsInContainers)
-            .GetMethod("ReadAvailableOutput", BindingFlags.NonPublic | BindingFlags.Static, null,
-                [typeof(Stream), typeof(TimeSpan)], null)!;
-        using var stream = new NonTerminatingStream("hello\n"u8.ToArray());
+            .GetMethod("GetExecutionError", BindingFlags.NonPublic | BindingFlags.Static)!;
 
-        var result = (string)method.Invoke(null, [stream, TimeSpan.FromMilliseconds(10)])!;
+        var result = (string)method.Invoke(null, ["{\"metadata\":{},\"status\":\"Success\"}"])!;
 
-        Assert.That(result, Is.EqualTo("hello\n"));
+        Assert.That(result, Is.Empty);
     }
 
     [Test]
-    public void TryReadStreamOutput_WhenStreamFactoryBlocks_ReturnsEmptyStringAfterTimeout()
+    public void GetExecutionError_WhenStatusPayloadIsFailure_ReturnsOriginalPayload()
     {
         var method = typeof(OsExecuteCommandsInContainers)
-            .GetMethod("TryReadStreamOutput", BindingFlags.NonPublic | BindingFlags.Static, null,
-                [typeof(Func<Stream>), typeof(TimeSpan), typeof(TimeSpan)], null)!;
-        var blockedFactory = new Func<Stream>(() =>
-        {
-            using var neverCompletes = new ManualResetEventSlim(false);
-            neverCompletes.Wait();
-            return Stream.Null;
-        });
+            .GetMethod("GetExecutionError", BindingFlags.NonPublic | BindingFlags.Static)!;
+        const string payload = "{\"metadata\":{},\"status\":\"Failure\",\"reason\":\"NonZeroExitCode\"}";
 
-        var result = (string)method.Invoke(null,
-            [blockedFactory, TimeSpan.FromMilliseconds(10), TimeSpan.FromMilliseconds(10)])!;
+        var result = (string)method.Invoke(null, [payload])!;
 
-        Assert.That(result, Is.Empty);
+        Assert.That(result, Is.EqualTo(payload));
     }
 
     private static Openshift CreateOpenshiftConfig()

@@ -4,6 +4,7 @@ using k8s;
 using k8s.Autorest;
 using k8s.Models;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 using QaaS.Common.Probes.ConfigurationObjects.Os;
 
 namespace QaaS.Common.Probes.OsProbes;
@@ -15,8 +16,6 @@ namespace QaaS.Common.Probes.OsProbes;
 /// <qaas-docs group="Cluster orchestration" subgroup="In-container commands" />
 public class OsExecuteCommandsInContainers : BaseOsProbe<OsExecuteCommandsInContainersConfig>
 {
-    private static readonly TimeSpan OutputReadIdleTimeout = TimeSpan.FromMilliseconds(250);
-
     protected override void RunOsProbe()
     {
         var pods = Configuration.ApplicationLabels!
@@ -54,82 +53,79 @@ public class OsExecuteCommandsInContainers : BaseOsProbe<OsExecuteCommandsInCont
     [ExcludeFromCodeCoverage]
     protected virtual string ExecuteCommands(V1Pod pod, string containerName)
     {
+        // Request a non-TTY exec session so Kubernetes keeps stdout/stderr/status on separate channels and
+        // surfaces non-zero exits on the status stream.
         using var websocket = Kubernetes!
-            .WebSocketNamespacedPodExecAsync(pod.Name(), pod.Namespace(), Configuration.Commands, containerName)
+            .WebSocketNamespacedPodExecAsync(pod.Name(), pod.Namespace(), Configuration.Commands, containerName,
+                stderr: true, stdin: false, stdout: true, tty: false)
             .GetAwaiter().GetResult();
         using var demux = new StreamDemuxer(websocket);
+        // StreamDemuxer only buffers channels that were requested before the websocket frames arrive, so create
+        // stdout/stderr/status streams up front to avoid losing a failure status while stdout is still being read.
+        using var standardOutputStream = demux.GetStream(1, 1);
+        using var standardErrorStream = demux.GetStream(2, 2);
+        using var statusStream = demux.GetStream(3, 3);
         demux.Start();
 
-        using var stream = demux.GetStream(1, 1);
-        var standardOutput = ReadAvailableOutput(stream);
-        // The Kubernetes exec status/error channel is optional and some clusters do not materialize it for
-        // successful commands. Reading it on a bounded task keeps live exec probes from hanging indefinitely
-        // when the channel never becomes readable.
-        var executionError = TryReadStreamOutput(demux, 3, 3, OutputReadIdleTimeout);
+        var standardOutput = ReadAvailableOutput(standardOutputStream);
+        var standardError = ReadAvailableOutput(standardErrorStream);
+        var executionError = GetExecutionError(ReadAvailableOutput(statusStream));
+        if (!string.IsNullOrWhiteSpace(standardError))
+        {
+            Context.Logger.LogDebug("Command execution stderr for pod {PodName} container {ContainerName}: {CommandError}",
+                pod.Name(), containerName, standardError.Trim());
+        }
         if (!string.IsNullOrWhiteSpace(executionError))
         {
+            var errorDetails = string.IsNullOrWhiteSpace(standardError)
+                ? executionError.Trim()
+                : $"{executionError.Trim()}{Environment.NewLine}{standardError.Trim()}";
             throw new InvalidOperationException(
-                $"Command execution failed for pod '{pod.Name()}' container '{containerName}': {executionError.Trim()}");
+                $"Command execution failed for pod '{pod.Name()}' container '{containerName}': {errorDetails}");
         }
 
         return standardOutput.Replace("\r", "").Replace("\n", "");
     }
 
-    private static string ReadAvailableOutput(Stream stream)
-        => ReadAvailableOutput(stream, OutputReadIdleTimeout);
+    private static string GetExecutionError(string executionStatus)
+    {
+        var trimmedStatus = executionStatus.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedStatus))
+        {
+            return string.Empty;
+        }
 
-    private static string ReadAvailableOutput(Stream stream, TimeSpan idleTimeout)
+        try
+        {
+            var statusPayload = JObject.Parse(trimmedStatus);
+            return string.Equals(statusPayload["status"]?.ToString(), "Success", StringComparison.OrdinalIgnoreCase)
+                ? string.Empty
+                : trimmedStatus;
+        }
+        catch
+        {
+            return trimmedStatus;
+        }
+    }
+
+    private static string ReadAvailableOutput(Stream stream)
     {
         var builder = new StringBuilder();
         var buffer = new byte[4096];
 
         while (true)
         {
-            using var cancellationTokenSource = new CancellationTokenSource(idleTimeout);
-
-            try
-            {
-                var bytesRead = stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationTokenSource.Token)
-                    .GetAwaiter().GetResult();
-                if (bytesRead <= 0)
-                {
-                    break;
-                }
-
-                builder.Append(Encoding.UTF8.GetString(buffer, 0, bytesRead));
-            }
-            catch (OperationCanceledException)
+            var bytesRead = stream.ReadAsync(buffer.AsMemory(0, buffer.Length), CancellationToken.None)
+                .GetAwaiter().GetResult();
+            if (bytesRead <= 0)
             {
                 break;
             }
+
+            builder.Append(Encoding.UTF8.GetString(buffer, 0, bytesRead));
         }
 
         return builder.ToString();
-    }
-
-    private static string TryReadStreamOutput(StreamDemuxer demuxer, byte? index, byte? streamType,
-        TimeSpan streamReadTimeout)
-        => TryReadStreamOutput(() => demuxer.GetStream(index, streamType), streamReadTimeout, OutputReadIdleTimeout);
-
-    private static string TryReadStreamOutput(Func<Stream> streamFactory, TimeSpan streamReadTimeout,
-        TimeSpan idleTimeout)
-    {
-        try
-        {
-            var readTask = Task.Run(() =>
-            {
-                using var stream = streamFactory();
-                return ReadAvailableOutput(stream, idleTimeout);
-            });
-
-            return readTask.Wait(streamReadTimeout)
-                ? readTask.Result
-                : string.Empty;
-        }
-        catch
-        {
-            return string.Empty;
-        }
     }
 
     /// <summary>
