@@ -11,8 +11,8 @@ The stock **`IProbe` hook library** for the QaaS platform: 41 pre-built probes f
 | Folder | Count | Examples |
 |---|---|---|
 | `OsProbes/` (Kubernetes/OpenShift) | 11 | OsScaleDeploymentPods, OsUpdateDeploymentImage, OsRestartPods, OsExecuteCommandsInContainers |
-| `RabbitMqProbes/` | 11 | Create/Delete Exchange/Queue/Bindings/Users/Vhosts, PurgeRabbitMqQueues, Download/UploadDefinitions |
-| `RedisProbes/` | 4 | FlushAllRedis, FlushDbRedis, EmptyRedisByChunks (SCAN+batch), ExecuteRedisCommand(s) |
+| `RabbitMqProbes/` | 15 | Create/Delete Exchange/Queue/Bindings/Users/Vhosts/Permissions, PurgeRabbitMqQueues, Download/UploadDefinitions, UpsertRabbitMqPermissions |
+| `RedisProbes/` | 5 | FlushAllRedis, FlushDbRedis, EmptyRedisByChunks (SCAN+batch), ExecuteRedisCommand(s) |
 | `S3Probes/` | 3 | CreateS3Bucket, DeleteS3Bucket, EmptyS3Bucket |
 | `SqlProbes/` | 3 | MsSql/OracleSql/PostgreSql DataBaseTablesTruncate |
 | `MongoDbProbes/` | 2 | DropMongoDbCollection, EmptyMongoDbCollection |
@@ -34,7 +34,7 @@ dotnet test --no-build          # NUnit, QaaS.Common.Probes.Tests
 - Configuration class shape feeds the **family JSON schema** published by QaaS.PackageMirror — property renames break editor validation for every user.
 - `OsExecuteCommandsInContainers` uses Kubernetes status-stream (stream 3) demultiplexing to detect non-zero exit codes — fragile; test against a real cluster before changing.
 - Versioning: csproj `VersionPrefix 0.0.0`; real versions come from stable Git tags (`X.X.X`) during CI packaging. Don't hand-edit versions.
-- CI (windows-latest) enforces **≥70% line coverage** via dotnet-coverage; PRs failing coverage fail CI.
+- CI (windows-latest) collects line coverage via dotnet-coverage and reports it; no minimum threshold is enforced.
 - Probes run against live infrastructure (K8s, RabbitMQ, Redis, S3, SQL, Mongo, Elastic) — unit tests must mock clients, never require live services.
 
 ## Process
